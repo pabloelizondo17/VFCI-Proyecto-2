@@ -23,6 +23,7 @@ class wb_item #(int data_W = `WB_DATA_W, int addr_W = `WB_ADDR_W) extends uvm_se
 
     rand wb_item_kind                  kind;
     rand bit                           we;
+    rand              [3 : 0]          sel;
     rand              [(addr_W-1) : 0] addr;
     rand              [(data_W-1) : 0] data;
     rand int unsigned                  delay;
@@ -45,6 +46,7 @@ class wb_item #(int data_W = `WB_DATA_W, int addr_W = `WB_ADDR_W) extends uvm_se
     `uvm_object_param_utils_begin(this_wb_item)
         `uvm_field_enum(wb_item_kind, kind, UVM_ALL_ON)
         `uvm_field_int(we,                  UVM_ALL_ON)
+        `uvm_field_int(sel,                 UVM_ALL_ON)
         `uvm_field_int(addr,                UVM_ALL_ON)
         `uvm_field_int(data,                UVM_ALL_ON)
         `uvm_field_int(delay,               UVM_ALL_ON | UVM_NOCOMPARE)
