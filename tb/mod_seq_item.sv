@@ -31,7 +31,7 @@ class mod_seq_item extends uvm_sequence_item;
 
   //Constraints
 
-  constraint c_delay {soft delay inside [{0:1000}];} //Retardo máximo de 1000 ciclos
+  constraint c_delay {soft delay inside {[0:1000]};} //Retardo máximo de 1000 ciclos
 
   // Constructor
     function new(string name = "mod_seq_item"); 
@@ -40,5 +40,23 @@ class mod_seq_item extends uvm_sequence_item;
 
 
 endclass: mod_seq_item
+
+class mod_intr_item extends uvm_sequence_item;
+
+  //Señal que lee del DUT
+  bit  int_o; 
+  longint unsigned cycle; //Ciclo de reloj en el que se detectó la interrupción
+
+  //Registro en la fábrica
+  `uvm_object_utils_begin(mod_intr_item)
+    `uvm_field_int(int_o, UVM_ALL_ON)
+    `uvm_field_int(cycle, UVM_ALL_ON | UVM_NOCOMPARE)
+  `uvm_object_utils_end
+
+  // Constructor
+    function new(string name = "mod_intr_item"); 
+        super.new(name); 
+    endfunction
+endclass : mod_intr_item
 
 `endif //MOD_SEQ_ITEM_SV
