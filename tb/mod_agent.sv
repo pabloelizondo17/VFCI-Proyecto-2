@@ -12,16 +12,16 @@ uvm_sequencer #(mod_seq_item) mod_seqr;
 class mod_driver extends uvm_driver #(mod_seq_item);
   `uvm_component_utils(mod_driver)
 
-  //Handle del agente
-  mod_agent agent_h;
-
   //Constructor
-  function new(string name, uvm_component parent);
+  function new(string name = "mod_driver", uvm_component parent = null);
     super.new(name, parent);
   endfunction
 
+  virtual mod_if mod_vif; //Referencia  a la interfaz del modem
+  mod_agent cfg; //Referencia al agente del modem 
+
   //Build
-  virtual function void build_phase(uvm_phase phase);
+  function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     if(!uvm_config_db#(mod_agent)::get(this, "", "agent_h", agent_h))
       `uvm_fatal("AGENT_NOT_FOUND", "No se pudo obtener el handle del agente")
