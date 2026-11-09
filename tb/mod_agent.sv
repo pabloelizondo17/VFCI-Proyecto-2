@@ -1,14 +1,15 @@
+`ifndef MOD_AGENT_SV
+`define MOD_AGENT_SV
+
 //------------------------------------------------------------------------------------------
 //Archivo para agente de modem
 //------------------------------------------------------------------------------------------
-
 
 //Secuenciador del Modem
 uvm_sequencer #(mod_seq_item) mod_seqr;
 
 //Driver del modem
 class mod_driver extends uvm_driver #(mod_seq_item);
-
   `uvm_component_utils(mod_driver)
 
   //Handle del agente
