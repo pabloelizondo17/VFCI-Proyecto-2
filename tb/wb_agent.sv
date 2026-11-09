@@ -51,6 +51,8 @@ class wb_driver extends uvm_driver #(wb_item_t);
         bus_idle();
         apply_reset(5);
 
+        super.build_phase(phase);
+
         forever begin
             seq_item_port.get_next_item(req);
             repeat (req.delay) @(wb_vif.wb_driver_cb);
@@ -86,16 +88,16 @@ class wb_driver extends uvm_driver #(wb_item_t);
     endtask
 
     // ===== Proceso principal del driver =====
-    task drive_bus(wb_item wb_item);
+    task drive_bus(wb_item_t item);
         int unsigned guardia = 0;
         @(wb_vif.wb_driver_cb);
 
         wb_vif.wb_driver_cb.cyc        <= 1'b1;
         wb_vif.wb_driver_cb.stb        <= 1'b1;
-        wb_vif.wb_driver_cb.we         <= wb_item.we;
-        wb_vif.wb_driver_cb.sel        <= wb_item.sel;
-        wb_vif.wb_driver_cb.addr       <= wb_item.addr;
-        wb_vif.wb_driver_cb.data_m2dut <= wb_item.we ? wb_item.data : '0;
+        wb_vif.wb_driver_cb.we         <= item.we;
+        wb_vif.wb_driver_cb.sel        <= item.sel;
+        wb_vif.wb_driver_cb.addr       <= item.addr;
+        wb_vif.wb_driver_cb.data_m2dut <= item.we ? item.data : '0;
 
         do begin
             @(wb_vif.wb_driver_cb); 
@@ -104,7 +106,7 @@ class wb_driver extends uvm_driver #(wb_item_t);
             end
         end while(wb_vif.wb_driver_cb.ack !== 1'b1);
 
-        if (!wb_item.we) wb_item.data = wb_vif.wb_driver_cb.data_dut2m;
+        if (!item.we) item.data = wb_vif.wb_driver_cb.data_dut2m;
 
         bus_idle();
     endtask
@@ -116,8 +118,68 @@ endclass : wb_driver
 // Monitor Wishbone (wb_monitor)
 // =======================================================
 class wb_monitor extends uvm_monitor;
+    `uvm_component_utils(wb_monitor)
+    wb_agent_cfg  cfg;
+    virtual wb_if wb_vif;
 
+    // ===== Puerto de análisis =====
+    uvm_analysis_port #(wb_item_t) wb_mon_ap
 
+    // ===== Constructor con la fábrica =====
+    function new(string name = "wb_monitor", uvm_component parent = null); 
+        super.new(name, parent); 
+    endfunction
+
+    // ===== Fase "build" de UVM =====
+    function void build_phase(uvm_phase phase);
+        super.build_phase(phase);
+
+        wb_mon_ap = new("wb_mon_ap", this);
+
+        if (!uvm_config_db#(wb_agent_cfg)::get(this, "", "cfg", cfg)) begin
+            `uvm_fatal("NOCFG", "wb_monitor sin wb_agent_cfg")
+        end
+
+        wb_vif = cfg.wb_vif;
+    endfunction
+
+    // ===== Fase "run" de UVM =====
+    task run_phase(uvm_phase phase);
+        logic prev_rst = 1'bx;
+
+        forever begin
+            @(wb_vif.wb_monitor_cb);
+
+            // ===== Se registra un reset =====
+            if (wb_vif.wb_monitor_cb.rst !== prev_rst) begin
+                wb_item item = wb_item::type_id::create("rst_item");
+
+                item.kind  = WB_RESET;
+                item.data  = wb_vif.wb_monitor_cb.rst;
+                item.stamp = wb_vif.wb_monitor_cb.clk_counter;
+                prev_rst   = wb_vif.wb_monitor_cb.rst;
+
+                wb_mon_ap.write(item);
+            end
+
+            // ===== Se registra una transferencia =====
+            if(wb_vif.wb_monitor_cb.cyc &&
+               wb_vif.wb_monitor_cb.stb &&
+               wb_vif.wb_monitor_cb.ack) begin
+                wb_item item = wb_item::type_id::create("trans_item");
+
+                item.kind  = WB_BUS;
+                item.we    = wb_vif.wb_monitor_cb.we;
+                item.data  = wb_vif.wb_monitor_cb.we ? 
+                             wb_vif.wb_monitor_cb.data_m2dut : 
+                             wb_vif.wb_monitor_cb.data_dut2m;
+                item.addr  = wb_vif.wb_monitor_cb.addr;
+                item.stamp = wb_vif.wb_monitor_cb.clk_counter;
+
+                wb_mon_ap.write(item);
+            end
+        end
+    endtask
 endclass : wb_monitor
 
 

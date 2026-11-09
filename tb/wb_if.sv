@@ -26,18 +26,22 @@ interface wb_if #(int data_W = `WB_DATA_W, int addr_W = `WB_ADDR_W)(input logic 
     logic [(data_W-1) : 0] data_m2dut = '0;  // ambiente -> DUT
     logic [(data_W-1) : 0] data_dut2m;       // DUT -> ambiente
 
+    longint unsigned clk_counter       = 0;
+    always @(posedge clk) clk_counter <= clk_counter + 1;
+
 
     // ===== Clocking block para el driver wishbone =====
     clocking wb_driver_cb @(posedge clk);
         default input #1step output #1;
-        output rst, we, stb, cyc, sel, addr, data_m2dut
-        input ack, data_dut2m
+        output rst, we, stb, cyc, sel, addr, data_m2dut;
+        input ack, data_dut2m, clk_counter;
     endclocking
 
     // ===== Clocking block para el monitor wishbone =====
     clocking wb_monitor_cb @(posedge clk);
         default input #1step;
-        input rst, we, stb, cyc, ack, sel, addr, data_m2dut, data_dut2m
+        input rst, we, stb, cyc, ack, sel, addr, 
+              data_m2dut, data_dut2m, clk_counter;
     endclocking
 
     // ===== Modport para el driver wishbone =====
