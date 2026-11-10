@@ -51,13 +51,13 @@ interface wb_if #(int data_W = `WB_DATA_W, int addr_W = `WB_ADDR_W)(input logic 
     );
 
     // ===== Modport para el monitor wishbone =====
-    modport wb_driver_mp(
+    modport wb_monitor_mp(
         clocking wb_monitor_cb,
         input clk
     );
 
     // ===== Modport para el DUT =====
-    modport wb_driver_mp(
+    modport wb_dut_mp(
         input clk, rst, we, stb, cyc, sel, addr, data_m2dut
         output ack, data_dut2m
     );
