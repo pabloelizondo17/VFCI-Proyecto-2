@@ -20,19 +20,61 @@ class mod_driver extends uvm_driver #(mod_seq_item);
     super.new(name, parent); 
   endfunction
 
-  //Build phase del driver
-    virtual function void build_phase(uvm_phase phase);
+    //Build phase del driver
+  virtual function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     if (!uvm_config_db#(mod_agent_cfg)::get(this, "", "cfg", mod_cfg)) begin
       `uvm_fatal("NO CFG", "Driver sin mod_cfg")
     end
     mod_vif = mod_cfg.vif; //Se obtiene la referencia a la interfaz del modem
-    endfunction 
+    endfunction
+
+  task reposo();
+    mod_vif.dsr_pad_i <= 1'b0;
+    mod_vif.ri_pad_i <= 1'b0;
+    mod_vif.cts_pad_i <= 1'b0;
+    mod_vif.dcd_pad_i <= 1'b0; 
+  endtask  
 
 //Run phase del driver
   task run_phase(uvm_phase phase);
 
-    
+    reposo(); //Se inicializan las señales de entrada del modem
+    @(negedge mod_vif.rst); //Se espera a que termine el reset
+
+    forever begin
+      seq_item_port.get_next_item(req); //Se obtiene la transacción de la secuencia
+      fork 
+
+        //Hilo 1: Aplica el item
+        begin
+          repeat(req.delay) @(mod_vif.mod_driver_cb); //Se espera req.delay ciclos del cb
+          
+          @(mod_vif.mod_driver_cb); //Evita pisar el item anterior si delay = 0
+
+          mod_vif.mod_driver_cb.dsr_pad_i <= req.dsr_pad_i;
+          mod_vif.mod_driver_cb.ri_pad_i <= req.ri_pad_i;
+          mod_vif.mod_driver_cb.cts_pad_i <= req.cts_pad_i;
+          mod_vif.mod_driver_cb.dcd_pad_i <= req.dcd_pad_i;
+      
+
+        end
+
+        //Hilo 2: Reset a mitad de la transaccion
+        begin
+          @(posedge mod_vif.rst);
+        end  
+
+      join_any
+      disable fork;
+
+      if (mod_vif.rst === 1'b1) begin 
+        reposo();
+        @(negedge mod_vif.rst);
+      end
+
+      seq_item_port.item_done();
+    end 
 
   endtask 
 // 
