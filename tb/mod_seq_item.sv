@@ -11,11 +11,13 @@ class mod_seq_item extends uvm_sequence_item;
   rand bit  cts_pad_i; 
   rand bit  dcd_pad_i; 
   rand int unsigned delay; //Ciclos antes de aplicar cambios de señales
-
+  
   //Señales que reporta el monitor 
   bit  rts_pad_o;
   bit  dtr_pad_o; 
   ri_edge_e ri_edge; //Indica si hubo flanco de RI
+
+  longint unsigned cycle; //Ciclo (clk_counter) en el que el monitor vio el cambio
 
   //Registro en la fábrica
   `uvm_object_utils_begin(mod_seq_item)
@@ -26,6 +28,7 @@ class mod_seq_item extends uvm_sequence_item;
     `uvm_field_int(rts_pad_o, UVM_ALL_ON)
     `uvm_field_int(dtr_pad_o, UVM_ALL_ON)
     `uvm_field_int(delay, UVM_ALL_ON | UVM_NOCOMPARE)
+    `uvm_field_int(cycle, UVM_ALL_ON | UVM_NOCOMPARE)
     `uvm_field_enum(ri_edge_e, ri_edge, UVM_ALL_ON)
   `uvm_object_utils_end
 
