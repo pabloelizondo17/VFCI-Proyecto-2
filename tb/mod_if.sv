@@ -29,7 +29,7 @@ interface mod_if (input logic clk, input logic rst);
   endclocking 
 
   //Modport para el driver el modem
-  modport mod_driver_mp ( clocking mod_driver_cb, input rst);
+  modport mod_driver_mp ( clocking mod_driver_cb, input rst, output cts_pad_i, dsr_pad_i, ri_pad_i, dcd_pad_i);
 
   //Modport para el monitor del modem 
   modport mod_monitor_mp (clocking mod_monitor_cb, input rst);
