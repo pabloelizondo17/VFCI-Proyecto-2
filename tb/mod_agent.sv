@@ -252,6 +252,62 @@ endclass: intr_monitor
 
 //Agente del modem
 class mod_agent extends uvm_agent;
+  `uvm_component_utils(mod_agent)
+
+  //Constructor
+  function new(string name = "mod_agent", uvm_component parent = null); 
+    super.new(name, parent); 
+  endfunction
+
+  //Configuracion  
+  mod_agent_cfg mod_cfg;
+
+  //Componentes
+  intr_monitor intr_mon;
+  mod_driver   mod_drvr;
+  mod_monitor  mod_mon;
+  mod_seqr     mod_sequencer; 
+
+  //Puertos hacia el ambiente
+  uvm_analysis_port #(mod_seq_item) mod_agent_ap;
+  uvm_analysis_port #(mod_intr_item) mod_agent_intr_ap;
+
+  //Build phase
+  virtual function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    if (!uvm_config_db#(mod_agent_cfg)::get(this, "", "cfg", mod_cfg)) begin
+      `uvm_fatal("NO CFG", "Agente sin mod_cfg")
+    end
+
+    //Creacion de los ap
+    mod_agent_ap = new("mod_agent_ap", this);
+    mod_agent_intr_ap = new("mod_agent_intr_ap", this);
+
+    //Creacion de los monitores
+    mod_mon = mod_monitor::type_id::create("mod_monitor", this);
+    intr_mon = intr_monitor::type_id::create("intr_monitor", this);
+
+    if (mod_cfg.is_active == UVM_ACTIVE) begin
+
+      mod_drvr = mod_driver::type_id::create("mod_drvr", this);
+      mod_sequencer = uvm_sequencer #(mod_seq_item)::type_id::create("mod_sequencer", this);
+
+    end 
+    
+  endfunction
+
+  //Connect phase
+    function void connect_phase(uvm_phase phase);
+        super.connect_phase(phase);
+
+        if(mod_cfg.is_active == UVM_ACTIVE) begin
+            mod_drvr.seq_item_port.connect(mod_sequencer.seq_item_export);
+        end
+
+        //Conecion de los ap de monitores a los ap del agente
+        mod_mon.mod_mon_ap.connect(this.mod_agent_ap);
+        intr_mon.mod_intr_mon_ap.connect(this.mod_agent_intr_ap);
+    endfunction
 
 endclass: mod_agent
 
