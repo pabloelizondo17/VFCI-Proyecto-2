@@ -1,6 +1,21 @@
 `ifndef SERIAL_AGENT_CFG_SV
 `define SERIAL_AGENT_CFG_SV
 
+//------------------------------------------------------------------------------------------------------
+//                   Apuntes: VALOR QUE QUIERO ALEATORIZAR
+// -n_items: Cantidad de caracteres a mandar
+// -gap: Cuanto tiempo en reposo
+// -glitch_pct: Si mete un falso inicio (para que receptor lo descarte)
+// -glitch_pct(mismo): Si mete un pulso en un dato (verificar que muestrea solo en un punto en el bit)
+// -parity_err_pct: Si invierte el bit de paridad
+// -frame_err_pct: Si lo invierte
+// -break_pct: Si en lugar de caracter, manda un break
+// -break_len: Cuánto dura el break (Que BI se detecte con breaks cortos y largos)
+// -baud_out_pct: Si el caracter va dentro o fuera de tolerancia 
+// -baud_dev: Cuanta desviación si va adentro
+// -baud_out_dev: Cuanta desviacion si va afuera
+//--------------------------------------------------------------------------------------------------------
+
 class serial_agent_cfg extends uvm_object;
   
   //Registro en fábrica

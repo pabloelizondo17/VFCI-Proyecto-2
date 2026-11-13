@@ -15,7 +15,7 @@ class ser_seq_item extends uvm_sequence_item;
   `uvm_object_utils_end
 
   //Constraints
-  constraint c_delay {soft delay inside {[0:1000]};} //Retardo máximo de 1000 ciclos
+  
 
   // Constructor
     function new(string name = "ser_seq_item"); 
