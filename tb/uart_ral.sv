@@ -31,7 +31,7 @@
 // =======================================================
 
 // ===== Registro RBR ====================================
-class uart_rbr_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR
+class uart_rbr_reg extends uvm_reg;
     `uvm_object_utils(uart_rbr_reg)
 
     rand uvm_reg_field rx;
@@ -53,7 +53,7 @@ endclass : uart_rbr_reg
 
 
 // ===== Registro THR ====================================
-class uart_thr_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR
+class uart_thr_reg extends uvm_reg;
     `uvm_object_utils(uart_thr_reg)
 
     rand uvm_reg_field tx;
@@ -75,7 +75,7 @@ endclass : uart_thr_reg
 
 
 // ===== Registro IER ====================================
-class uart_ier_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR
+class uart_ier_reg extends uvm_reg;
     `uvm_object_utils(uart_ier_reg)
 
     rand uvm_reg_field rda, thre, rls, ms;
@@ -94,16 +94,16 @@ class uart_ier_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR
 
         //(padre, tamaño, pos. de lsb, acceso, volatil, 
         // valor rst, rst conocido, rand? y se accede solo)
-        rda .configure(this, 1, 0, "RW", 0, 1'b0, 1, 0, 0);
-        thre.configure(this, 1, 1, "RW", 0, 1'b0, 1, 0, 0);
-        rls .configure(this, 1, 2, "RW", 0, 1'b0, 1, 0, 0);
-        ms  .configure(this, 1, 3, "RW", 0, 1'b0, 1, 0, 0);
+        rda .configure(this, 1, 0, "RW", 0, 1'b0, 1, 1, 0);
+        thre.configure(this, 1, 1, "RW", 0, 1'b0, 1, 1, 0);
+        rls .configure(this, 1, 2, "RW", 0, 1'b0, 1, 1, 0);
+        ms  .configure(this, 1, 3, "RW", 0, 1'b0, 1, 1, 0);
     endfunction
 endclass : uart_ier_reg
 
 
 // ===== Registro IIR ====================================
-class uart_iir_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR 
+class uart_iir_reg extends uvm_reg;
     `uvm_object_utils(uart_iir_reg)
 
     rand uvm_reg_field ip, ii, fifoen;
@@ -129,7 +129,7 @@ endclass : uart_iir_reg
 
 
 // ===== Registro FCR ====================================
-class uart_fcr_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR 
+class uart_fcr_reg extends uvm_reg;
     `uvm_object_utils(uart_fcr_reg)
 
     rand uvm_reg_field rfr, tfr, tl;
@@ -147,15 +147,15 @@ class uart_fcr_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR
 
         //(padre, tamaño, pos. de lsb, acceso, volatil, 
         // valor rst, rst conocido, rand? y se accede solo)
-        rfr.configure(this, 1, 1, "WO", 0, 1'b0,  1, 0, 0);
-        tfr.configure(this, 1, 2, "WO", 0, 1'b0,  1, 0, 0);
-        tl .configure(this, 2, 6, "WO", 0, 2'b11, 1, 0, 0);
+        rfr.configure(this, 1, 1, "WO", 0, 1'b0,  1, 1, 0);
+        tfr.configure(this, 1, 2, "WO", 0, 1'b0,  1, 1, 0);
+        tl .configure(this, 2, 6, "WO", 0, 2'b11, 1, 1, 0);
     endfunction
 endclass : uart_fcr_reg
 
 
 // ===== Registro LCR ====================================
-class uart_lcr_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR 
+class uart_lcr_reg extends uvm_reg;
     `uvm_object_utils(uart_lcr_reg)
 
     rand uvm_reg_field bits, sb, pe, ep, sp, bc, dl;
@@ -177,19 +177,19 @@ class uart_lcr_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR
 
         //(padre, tamaño, pos. de lsb, acceso, volatil, 
         // valor rst, rst conocido, rand? y se accede solo)
-        bits.configure(this, 2, 0, "RW", 0, 2'b11, 1, 0, 0);
-        sb  .configure(this, 1, 2, "RW", 0, 1'b0,  1, 0, 0);
-        pe  .configure(this, 1, 3, "RW", 0, 1'b0,  1, 0, 0);
-        ep  .configure(this, 1, 4, "RW", 0, 1'b0,  1, 0, 0);
-        sp  .configure(this, 1, 5, "RW", 0, 1'b0,  1, 0, 0);
-        bc  .configure(this, 1, 6, "RW", 0, 1'b0,  1, 0, 0);
-        dl  .configure(this, 1, 7, "RW", 0, 1'b0,  1, 0, 0);
+        bits.configure(this, 2, 0, "RW", 0, 2'b11, 1, 1, 0);
+        sb  .configure(this, 1, 2, "RW", 0, 1'b0,  1, 1, 0);
+        pe  .configure(this, 1, 3, "RW", 0, 1'b0,  1, 1, 0);
+        ep  .configure(this, 1, 4, "RW", 0, 1'b0,  1, 1, 0);
+        sp  .configure(this, 1, 5, "RW", 0, 1'b0,  1, 1, 0);
+        bc  .configure(this, 1, 6, "RW", 0, 1'b0,  1, 1, 0);
+        dl  .configure(this, 1, 7, "RW", 0, 1'b0,  1, 1, 0); // <= DLAB
     endfunction
 endclass : uart_lcr_reg
 
 
 // ===== Registro MCR ====================================
-class uart_mcr_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR 
+class uart_mcr_reg extends uvm_reg;
     `uvm_object_utils(uart_mcr_reg)
 
     rand uvm_reg_field dtr, rts, out1, out2, lb;
@@ -209,17 +209,17 @@ class uart_mcr_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR
 
         //(padre, tamaño, pos. de lsb, acceso, volatil, 
         // valor rst, rst conocido, rand? y se accede solo)
-        dtr .configure(this, 1, 0, "WO", 0, 1'b0,  1, 0, 0);
-        rts .configure(this, 1, 1, "WO", 0, 1'b0,  1, 0, 0);
-        out1.configure(this, 1, 2, "WO", 0, 1'b0,  1, 0, 0);
-        out2.configure(this, 1, 3, "WO", 0, 1'b0,  1, 0, 0);
-        lb  .configure(this, 1, 4, "WO", 0, 1'b0,  1, 0, 0);
+        dtr .configure(this, 1, 0, "WO", 0, 1'b0,  1, 1, 0);
+        rts .configure(this, 1, 1, "WO", 0, 1'b0,  1, 1, 0);
+        out1.configure(this, 1, 2, "WO", 0, 1'b0,  1, 1, 0);
+        out2.configure(this, 1, 3, "WO", 0, 1'b0,  1, 1, 0);
+        lb  .configure(this, 1, 4, "WO", 0, 1'b0,  1, 1, 0);
     endfunction
 endclass : uart_mcr_reg
 
 
 // ===== Registro LSR ====================================
-class uart_lsr_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR 
+class uart_lsr_reg extends uvm_reg;
     `uvm_object_utils(uart_lsr_reg)
 
     rand uvm_reg_field dr, oe, pe, fe, bi, tfe, te, ei;
@@ -255,7 +255,7 @@ endclass : uart_lsr_reg
 
 
 // ===== Registro MSR ====================================
-class uart_msr_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR
+class uart_msr_reg extends uvm_reg;
     `uvm_object_utils(uart_msr_reg)
 
     rand uvm_reg_field dcts, ddsr, teri, ddcd, ccts, cdsr, cri, cdcd;
@@ -282,16 +282,16 @@ class uart_msr_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR
         ddsr.configure(this, 1, 1, "RO", 1, 1'b0,  1, 0, 0);
         teri.configure(this, 1, 2, "RO", 1, 1'b0,  1, 0, 0);
         ddcd.configure(this, 1, 3, "RO", 1, 1'b0,  1, 0, 0);
-        ccts.configure(this, 1, 4, "RO", 1, 1'b0,  1, 0, 0);
-        cdsr.configure(this, 1, 5, "RO", 1, 1'b0,  1, 0, 0);
-        cri .configure(this, 1, 6, "RO", 1, 1'b0,  1, 0, 0);
-        cdcd.configure(this, 1, 7, "RO", 1, 1'b0,  1, 0, 0);
+        ccts.configure(this, 1, 4, "RO", 1, 1'b0,  0, 0, 0);
+        cdsr.configure(this, 1, 5, "RO", 1, 1'b0,  0, 0, 0);
+        cri .configure(this, 1, 6, "RO", 1, 1'b0,  0, 0, 0);
+        cdcd.configure(this, 1, 7, "RO", 1, 1'b0,  0, 0, 0);
     endfunction
 endclass : uart_msr_reg
 
 
 // ===== Registro SR =====================================
-class uart_sr_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR
+class uart_sr_reg extends uvm_reg;
     `uvm_object_utils(uart_sr_reg)
 
     rand uvm_reg_field scratch;
@@ -313,7 +313,7 @@ endclass : uart_sr_reg
 
 
 // ===== Registro DL1 ====================================
-class uart_dl1_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR
+class uart_dl1_reg extends uvm_reg;
     `uvm_object_utils(uart_dl1_reg)
 
     rand uvm_reg_field dl1;
@@ -329,12 +329,12 @@ class uart_dl1_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR
     
         //(padre, tamaño, pos. de lsb, acceso, volatil, 
         // valor rst, rst conocido, rand? y se accede solo)
-        dl1.configure(this, 8, 0, "RW", 0, 8'b0, 1, 0, 0);
+        dl1.configure(this, 8, 0, "RW", 0, 8'b0, 1, 1, 0);
     endfunction
 endclass : uart_dl1_reg
 
 // ===== Registro DL2 ====================================
-class uart_dl2_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR
+class uart_dl2_reg extends uvm_reg;
     `uvm_object_utils(uart_dl2_reg)
 
     rand uvm_reg_field dl2;
@@ -350,13 +350,13 @@ class uart_dl2_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR
     
         //(padre, tamaño, pos. de lsb, acceso, volatil, 
         // valor rst, rst conocido, rand? y se accede solo)
-        dl2.configure(this, 8, 0, "RW", 0, 8'b0, 1, 0, 0);
+        dl2.configure(this, 8, 0, "RW", 0, 8'b0, 1, 1, 0);
     endfunction
 endclass : uart_dl2_reg
 
 
 // ===== Registro DBG1 ===================================
-class uart_dbg1_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR
+class uart_dbg1_reg extends uvm_reg;
     `uvm_object_utils(uart_dbg1_reg)
 
     rand uvm_reg_field lsr_v, ier_v, iir_v, lcr_v, msr_v;
@@ -421,6 +421,9 @@ endclass : uart_dbg2_reg
 class uart_reg_block extends uvm_reg_block;
     `uvm_object_utils(uart_reg_block)
 
+    uvm_reg_map map_dlab0;
+    uvm_reg_map map_dlab1;
+
     rand uart_rbr_reg  rbr;
     rand uart_thr_reg  thr;
     rand uart_ier_reg  ier;
@@ -442,7 +445,74 @@ class uart_reg_block extends uvm_reg_block;
     endfunction
 
     virtual function void build();
+        rbr  = uart_rbr_reg::type_id::create("rbr");
+        thr  = uart_thr_reg::type_id::create("thr");
+        ier  = uart_ier_reg::type_id::create("ier");
+        iir  = uart_iir_reg::type_id::create("iir");
+        fcr  = uart_fcr_reg::type_id::create("fcr");
+        lcr  = uart_lcr_reg::type_id::create("lcr");
+        mcr  = uart_mcr_reg::type_id::create("mcr");
+        lsr  = uart_lsr_reg::type_id::create("lsr");
+        msr  = uart_msr_reg::type_id::create("msr");
+        sr   = uart_sr_reg::type_id::create("sr");
+        dl1  = uart_dl1_reg::type_id::create("dl1");
+        dl2  = uart_dl2_reg::type_id::create("dl2");
+        dbg1 = uart_dbg1_reg::type_id::create("dbg1");
+        dbg2 = uart_dbg2_reg::type_id::create("dbg2");
 
+        rbr.configure(this); rbr.build();
+        thr.configure(this); thr.build();
+        ier.configure(this); ier.build();
+        iir.configure(this); iir.build();
+        fcr.configure(this); fcr.build();
+        lcr.configure(this); lcr.build();
+        mcr.configure(this); mcr.build();
+        lsr.configure(this); lsr.build();
+        msr.configure(this); msr.build();
+        sr.configure(this); sr.build();
+        dl1.configure(this); dl1.build();
+        dl2.configure(this); dl2.build();
+        dbg1.configure(this); dbg1.build();
+        dbg2.configure(this); dbg2.build();
+
+        // ===== Mapa 1: map_dlab0 (RBR, THR, IER, IIR,
+        //       FCR, LCR, MCR, LSR, MSR, SR, DBG1, DBG2) =====
+        //            (name, base_addr, n_bytes, endian, byte_addressing = 1)
+        map_dlab0 = create_map("map_dlab0", 'h0, 4, UVM_LITTLE_ENDIAN, 1);
+
+        map_dlab0.add_reg(rbr, 'h0, "RO");
+        map_dlab0.add_reg(thr, 'h0, "WO");
+        map_dlab0.add_reg(ier, 'h1, "RW");
+        map_dlab0.add_reg(iir, 'h2, "RO");
+        map_dlab0.add_reg(fcr, 'h2, "WO");
+        map_dlab0.add_reg(lcr, 'h3, "RW");
+        map_dlab0.add_reg(mcr, 'h4, "WO");
+        map_dlab0.add_reg(lsr, 'h5, "RO");
+        map_dlab0.add_reg(msr, 'h6, "RO");
+        map_dlab0.add_reg(sr,  'h7, "RW");
+        map_dlab0.add_reg(dbg1,'h8, "RO");
+        map_dlab0.add_reg(dbg2,'hC, "RO");
+
+
+        // ===== Mapa 2: map_dlab1 (DL1, DL2, IIR, FCR, 
+        //       LCR, MCR, LSR, MSR, SR, DBG1, DBG2) =====
+        map_dlab1 = create_map("map_dlab1", 'h0, 4, UVM_LITTLE_ENDIAN, 1);
+
+        map_dlab1.add_reg(dl1, 'h0, "RW");
+        map_dlab1.add_reg(dl2, 'h1, "RW");
+        map_dlab1.add_reg(iir, 'h2, "RO");
+        map_dlab1.add_reg(fcr, 'h2, "WO");
+        map_dlab1.add_reg(lcr, 'h3, "RW");
+        map_dlab1.add_reg(mcr, 'h4, "WO");
+        map_dlab1.add_reg(lsr, 'h5, "RO");
+        map_dlab1.add_reg(msr, 'h6, "RO");
+        map_dlab1.add_reg(sr,  'h7, "RW");
+        map_dlab1.add_reg(dbg1,'h8, "RO");
+        map_dlab1.add_reg(dbg2,'hC, "RO");
+
+        default_map = map_dlab0;
+
+        lock_model();
     endfunction
 endclass : uart_reg_block
 
@@ -450,6 +520,9 @@ endclass : uart_reg_block
 // =======================================================
 // Adaptador RAL
 // =======================================================
+class uart_reg_adapter extends uvm_reg_adapter;
 
+
+endclass : uart_reg_adapter
 
 `endif //UART_RAL_SV
