@@ -1,5 +1,5 @@
-`ifndef SERIAL_AGENT_CFG_SV
-`define SERIAL_AGENT_CFG_SV
+`ifndef SER_AGENT_CFG_SV
+`define SER_AGENT_CFG_SV
 
 //------------------------------------------------------------------------------------------------------
 //                   Apuntes: VALOR QUE QUIERO ALEATORIZAR
@@ -16,13 +16,13 @@
 // -baud_out_dev: Cuanta desviacion si va afuera
 //--------------------------------------------------------------------------------------------------------
 
-class serial_agent_cfg extends uvm_object;
+class ser_agent_cfg extends uvm_object;
   
   //Registro en fábrica
-  `uvm_object_utils(serial_agent_cfg)
+  `uvm_object_utils(ser_agent_cfg)
 
   //Handle a la interfaz real
-  virtual serial_if vif;
+  virtual ser_if vif;
 
   //Modo del agente
   uvm_active_passive_enum is_active = UVM_ACTIVE;
@@ -68,7 +68,7 @@ class serial_agent_cfg extends uvm_object;
   //Agregar limitaciones para que se cumpla min menor que max
 
   //Constructor
-  function new(string name = "serial_agent_cfg");
+  function new(string name = "ser_agent_cfg");
     super.new(name);
   endfunction
 
@@ -90,6 +90,6 @@ class serial_agent_cfg extends uvm_object;
     return 16 * dl;
   endfunction
 
-endclass: serial_agent_cfg
+endclass: ser_agent_cfg
 
-`endif //SERIAL_AGENT_CFG_SV
+`endif //SER_AGENT_CFG_SV
