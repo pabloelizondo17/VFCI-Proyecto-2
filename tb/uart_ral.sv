@@ -524,6 +524,7 @@ endclass : uart_reg_block
 // =======================================================
 class uart_reg_adapter extends uvm_reg_adapter;
     `uvm_object_utils(uart_reg_adapter)
+    wb_agent_cfg cfg;
 
     // ===== Constructor con la fábrica =====
     function new(string name = "uart_reg_adapter");
@@ -547,9 +548,17 @@ class uart_reg_adapter extends uvm_reg_adapter;
                                            : ((rw.data & 64'hFF) << (8*lane));
         item.sel  = full_word ? 4'b1111 : (4'b0001 << lane);
 
-        if(!item.randomize(delay, rst_cycles)) begin    
-            // Nota: (kind = WB_BUS -> rst_cycles = 0)
-            `uvm_error("ADAPTER", "Proceso .randomize() del item falló.")
+        // ===== Aleatorización de delay y rst_cycles =====
+        if (cfg == null) begin
+            `uvm_fatal("ADAPTER", "El adaptador no tiene wb_agent_cfg asignado.")
+        end else begin
+            item.delay_min      = cfg.delay_min;
+            item.delay_max      = cfg.delay_max;
+
+            if(!item.randomize(delay, rst_cycles)) begin    
+                // Nota: (kind = WB_BUS -> rst_cycles = 0)
+                `uvm_fatal("ADAPTER", "Proceso .randomize() del item falló.")
+            end
         end
 
         return item;
