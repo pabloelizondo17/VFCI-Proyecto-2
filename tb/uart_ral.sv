@@ -521,44 +521,44 @@ endclass : uart_reg_block
 // Adaptador RAL
 //  -reg2bus: traduce operaciones del registro al bus
 //  -bus2reg: traduce operaciones del bus al registro
-// -------------------------------------------------------
-// Objeto de configuración: wb_agent_cfg
 // =======================================================
 class uart_reg_adapter extends uvm_reg_adapter;
     `uvm_object_utils(uart_reg_adapter)
 
     // ===== Constructor con la fábrica =====
-    function new(string name = "spi_reg_adapter");
+    function new(string name = "uart_reg_adapter");
         super.new(name);
 
         supports_byte_enable = 0;
         provides_responses   = 0;
     endfunction
 
-    //wb_agent_cfg  cfg;
-
     // ===== Escritura del modelo al bus =====
     virtual function uvm_sequence_item reg2bus(const ref uvm_reg_bus_op rw);
-        wb_item_t item = wb_item_t::type_id::create("item");
+        wb_item_t    item      = wb_item_t::type_id::create("item");
+        int unsigned lane      = rw.addr[1 : 0];     // byte donde "vive" el registro dentro de la palabra data
+        bit          full_word = (rw.n_bits == 32);  // n_bits: size del registro segun el mapa
 
-        int unsigned lane      = rw.addr[1 : 0];
-        bit          full_word = (rw.n_bits == 32);
+        item.kind = WB_BUS;
+        item.we   = (rw.kind == UVM_WRITE);
+        item.addr = rw.addr;
+        item.data = (rw.kind != UVM_WRITE) ? '0 : 
+                    full_word              ? rw.data[31:0]
+                                           : ((rw.data & 64'hFF) << (8*lane));
+        item.sel  = full_word ? 4'b1111 : (4'b0001 << lane);
 
-        item.kind       = WB_BUS;
-        item.we         = (rw.kind == UVM_WRITE);
-        item.addr       = rw.addr;
-        item.data       = (rw.kind == UVM_WRITE) ? rw.data : '0;
-        item.sel  = full_word ? 4'hF : (4'b0001 << lane);
-
-        item.rst_cycles.randomize();   // (kind = WB_BUS -> rst_cycles = 0)
-        item.delay.randomize();
+        if(!item.randomize(delay, rst_cycles)) begin    
+            // Nota: (kind = WB_BUS -> rst_cycles = 0)
+            `uvm_error("ADAPTER", "Proceso .randomize() del item falló.")
+        end
 
         return item;
     endfunction
 
     // ===== Escritura del bus al modelo =====
     virtual function void bus2reg(uvm_sequence_item bus_item, ref uvm_reg_bus_op rw);
-        wb_item_t item;
+        wb_item_t    item;
+        int unsigned lane;
 
         // ===== Verificación de seguridad =====
         if (!$cast(item, bus_item)) begin
@@ -566,9 +566,16 @@ class uart_reg_adapter extends uvm_reg_adapter;
             return;
         end
 
+        case(item.sel)
+            4'b0010: lane = 1;
+            4'b0100: lane = 2;
+            4'b1000: lane = 3;
+            default: lane = 0;
+        endcase
+
         rw.kind   = item.we ? UVM_WRITE : UVM_READ;
         rw.addr   = item.addr;
-        rw.data   = item.data;
+        rw.data   = (item.sel == 4'b1111) ? item.data : ((item.data >> (8*lane)) & 32'hFF);
         rw.status = UVM_IS_OK;
     endfunction
 endclass : uart_reg_adapter
