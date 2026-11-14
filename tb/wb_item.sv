@@ -4,6 +4,8 @@
 // Item de secuencia: wb_item
 //   - Parámetro data_W (32 u 8 bits) 
 //   - Parámetro addr_W (5 o 3 bits)
+// -------------------------------------------------------
+// Objeto de configuración: wb_agent_cfg
 // =======================================================
 
 
@@ -21,25 +23,32 @@ class wb_item #(int data_W = `WB_DATA_W, int addr_W = `WB_ADDR_W) extends uvm_se
     // ===== Define el tipo con parámetros =====
     typedef wb_item #(data_W, addr_W) this_wb_item;
 
+    // ===== Parámetros propios para los objetos =====
     rand wb_item_kind                  kind;
     rand bit                           we;
     rand              [3 : 0]          sel;
     rand              [(addr_W-1) : 0] addr;
     rand              [(data_W-1) : 0] data;
     rand int unsigned                  delay;
-    rand int unsigned                  rst_cycles;   // Duración del reset (kind = WB_RESET)
-    longint unsigned                   stamp;        // Borde en que ocurrió (lo llena el monitor)
+    rand int unsigned                  rst_cycles;
+    longint unsigned                   stamp; // Borde en que ocurrió
+
+    // ===== Límites para la aleatorización =====
+    int unsigned delay_min      = 0;
+    int unsigned delay_max      = 10;
+    int unsigned rst_cycles_min = 1;
+    int unsigned rst_cycles_max = 5; 
 
     // ===== Restricciones =====
-    constraint c_kind{
+    constraint c_kind {
         soft kind == WB_BUS;
     }
-    constraint c_rst_cycles{
+    constraint c_rst_cycles {
         (kind == WB_BUS)   -> rst_cycles == 0;
-        (kind == WB_RESET) -> soft rst_cycles inside {[1 : 5]};
+        (kind == WB_RESET) -> rst_cycles inside {[rst_cycles_min : rst_cycles_max]};
     }
-    constraint c_delay{
-        soft delay inside{[0 : 10]};
+    constraint c_delay {
+        delay inside {[delay_min : delay_max]};
     }
 
     // ===== Registro de item en la fábrica =====
@@ -50,7 +59,11 @@ class wb_item #(int data_W = `WB_DATA_W, int addr_W = `WB_ADDR_W) extends uvm_se
         `uvm_field_int(addr,                UVM_ALL_ON)
         `uvm_field_int(data,                UVM_ALL_ON)
         `uvm_field_int(delay,               UVM_ALL_ON | UVM_NOCOMPARE)
+        `uvm_field_int(delay_min,           UVM_ALL_ON | UVM_NOCOMPARE)
+        `uvm_field_int(delay_max,           UVM_ALL_ON | UVM_NOCOMPARE)
         `uvm_field_int(rst_cycles,          UVM_ALL_ON | UVM_NOCOMPARE)
+        `uvm_field_int(rst_cycles_min,      UVM_ALL_ON | UVM_NOCOMPARE)
+        `uvm_field_int(rst_cycles_max,      UVM_ALL_ON | UVM_NOCOMPARE)
         `uvm_field_int(stamp,               UVM_ALL_ON | UVM_NOCOMPARE)
     `uvm_object_utils_end
 
