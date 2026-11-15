@@ -356,7 +356,9 @@ class ser_agent extends uvm_agent;
   ser_seqr     ser_sequencer;
 
   //Puertos hacia el ambiente
-  uvm_analysis_port #(ser_seq_item) ser_agent_ap;
+  uvm_analysis_port #(ser_seq_item) ser_rx_ap;
+  uvm_analysis_port #(ser_seq_item) ser_tx_ap;
+  uvm_analysis_port #(ser_seq_item) ser_drv_ap;
 
   //Build phase
   virtual function void build_phase(uvm_phase phase);
@@ -366,10 +368,15 @@ class ser_agent extends uvm_agent;
     end
 
     //Creacion de los ap
-    ser_agent_ap = new("ser_agent_ap", this);
+    ser_rx_ap = new("ser_rx_ap", this);
+    ser_tx_ap = new("ser_tx_ap", this);
+    ser_drv_ap = new("ser_drv_ap", this);
 
     //Creacion de los monitores
-    ser_mon = ser_monitor::type_id::create("ser_monitor", this);
+    ser_mon_rx = ser_monitor::type_id::create("ser_monitor_rx", this);
+    ser_mon_rx.linea = SER_RX;
+    ser_mon_tx = ser_monitor::type_id::create("ser_monitor_tx", this);
+    ser_mon_tx.linea = SER_TX;
 
     if (ser_cfg.is_active == UVM_ACTIVE) begin
 
@@ -377,12 +384,21 @@ class ser_agent extends uvm_agent;
       ser_sequencer = uvm_sequencer #(ser_seq_item)::type_id::create("ser_sequencer", this);
 
     end 
-    
   endfunction
+
   //Connect phase
-    function void connect_phase(uvm_phase phase);
-        super.connect_phase(phase);
-    endfunction
+ virtual function void connect_phase(uvm_phase phase);
+    super.connect_phase(phase);
+
+    //Monitores hacia el ambiente
+    ser_mon_rx.ser_mon_ap.connect(ser_rx_ap);
+    ser_mon_tx.ser_mon_ap.connect(ser_tx_ap);
+
+    if (ser_cfg.is_active == UVM_ACTIVE) begin
+      ser_drvr.seq_item_port.connect(ser_sequencer.seq_item_export);
+      ser_drvr.ser_drv_ap.connect(ser_drv_ap);
+    end
+ endfunction 
 
 endclass: ser_agent
 
