@@ -20,7 +20,7 @@ class ser_seq_item extends uvm_sequence_item;
   rand int unsigned glitch_bit; //Bit donde hay un glitch de data
 
   //Tiempos
-  rand int baud_dev_pct; //Porcentaje de desviacion
+  rand int baud_dev_pct; //Porcentaje de desviacion (-4% es un 4% mas lento)
   rand int unsigned gap; //Tiempo en reposo antes del caracter (tiempo en bit)
 
   //Señales que reporta el monitor 
@@ -32,25 +32,31 @@ class ser_seq_item extends uvm_sequence_item;
   int bit_width; //Ciclos medidos por bit
   longint unsigned cycle; //clk_counter cuanod se termina el caracter
 
+  //Aplicado por el driver
+  int bit_delta;      //Ciclos que se le restaron a cada bit (con signo)
+  int dev_real_pct;   //Desviación real aplicada en %, tras el redondeo
+
   //Registro en la fábrica
   `uvm_object_utils_begin(ser_seq_item)
     //Lo que produce el DUT: se compara
     `uvm_field_int (data,                     UVM_ALL_ON)
-    `uvm_field_enum(ser_dir_e, dir,        UVM_ALL_ON)
+    `uvm_field_enum(ser_dir_e, dir,           UVM_ALL_ON)
     `uvm_field_int (data_bits,                UVM_ALL_ON |UVM_DEC)
     `uvm_field_int (parity_bit,               UVM_ALL_ON)
-    `uvm_field_int (stop_bit_ok,                  UVM_ALL_ON)
-    `uvm_field_int (break_visto,                 UVM_ALL_ON)
+    `uvm_field_int (stop_bit_ok,              UVM_ALL_ON)
+    `uvm_field_int (break_visto,              UVM_ALL_ON)
     `uvm_field_int (parity_err,               UVM_ALL_ON | UVM_NOCOMPARE )
     `uvm_field_int (frame_err,                UVM_ALL_ON | UVM_NOCOMPARE)
     `uvm_field_int (is_break,                 UVM_ALL_ON | UVM_NOCOMPARE)
     `uvm_field_int (break_len,                UVM_ALL_ON | UVM_NOCOMPARE|UVM_DEC)
     `uvm_field_enum(glitch_e, glitch,         UVM_ALL_ON | UVM_NOCOMPARE)
     `uvm_field_int (glitch_bit,               UVM_ALL_ON | UVM_NOCOMPARE|UVM_DEC)
-    `uvm_field_int (baud_dev_pct,                 UVM_ALL_ON | UVM_NOCOMPARE|UVM_DEC)
+    `uvm_field_int (baud_dev_pct,             UVM_ALL_ON | UVM_NOCOMPARE|UVM_DEC)
     `uvm_field_int (gap,                      UVM_ALL_ON | UVM_NOCOMPARE|UVM_DEC)
     `uvm_field_int (bit_width,                UVM_ALL_ON | UVM_NOCOMPARE|UVM_DEC)
     `uvm_field_int (cycle,                    UVM_ALL_ON | UVM_NOCOMPARE|UVM_DEC)
+    `uvm_field_int (bit_delta,                UVM_ALL_ON | UVM_NOCOMPARE | UVM_DEC)
+    `uvm_field_int (dev_real_pct,             UVM_ALL_ON | UVM_NOCOMPARE | UVM_DEC)
   `uvm_object_utils_end
 
   //Constraints

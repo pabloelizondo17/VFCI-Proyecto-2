@@ -11,6 +11,7 @@
 // -frame_err_pct: Si lo invierte
 // -break_pct: Si en lugar de caracter, manda un break
 // -break_len: Cuánto dura el break (Que BI se detecte con breaks cortos y largos)
+
 // -baud_out_pct: Si el caracter va dentro o fuera de tolerancia 
 // -baud_dev: Cuanta desviación si va adentro
 // -baud_out_dev: Cuanta desviacion si va afuera
@@ -50,10 +51,11 @@ class ser_agent_cfg extends uvm_object;
   //Desviación de baudios
   int unsigned baud_out_pct_min   = 10;  //Porcentaje de caracteres fuera de tolerancia (por época)
   int unsigned baud_out_pct_max   = 10;
-  int unsigned baud_dev_min       = 0;   //Magnitud dentro de tolerancia (por carácter)
-  int unsigned baud_dev_max       = 2;
+  int  baud_dev_min               = 0;   //Magnitud dentro de tolerancia (por carácter)
+  int  baud_dev_max               = 2;
   int unsigned baud_out_dev_min   = 4;   //Magnitud fuera de tolerancia (por carácter)
   int unsigned baud_out_dev_max   = 10;
+  int unsigned baud_tol = 4; 
  
   //Tiempos, en tiempos de bit (por carácter)
   int unsigned gap_min            = 0;   //Separación entre caracteres RX
@@ -63,7 +65,7 @@ class ser_agent_cfg extends uvm_object;
  
   //Caracteres por época
   int unsigned n_items_min        = 20;  
-  int unsigned n_items_max        = 100;
+  int unsigned n_items_max        = 100; 
   
   //Agregar limitaciones para que se cumpla min menor que max
 
