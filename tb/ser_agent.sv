@@ -58,6 +58,7 @@ class ser_driver extends uvm_driver #(ser_seq_item);
     `uvm_info("SER_DRV", $sformatf("Periodo de reloj medido: %0.3f", t_clk), UVM_LOW)  
   endtask 
 
+ //Agrega el bit y lo mantiene durante un tiempo determinado
   task poner (bit v, real t);
     ser_vif.srx_pad_i <= v; 
     if (t > 0.0) #(t); //Mantiene el valor durante un tiempo t 
@@ -82,7 +83,7 @@ class ser_driver extends uvm_driver #(ser_seq_item);
   endfunction 
 
   //Task en el que se instera un glitch al inicio de tx del caracter
-    task gap_y_glitch (ser_seq_item item);
+  task gap_y_glitch (ser_seq_item item);
     real width; //Tiempo del gap
 
     //Sin glitch: línea en reposo durante el gap
@@ -92,7 +93,7 @@ class ser_driver extends uvm_driver #(ser_seq_item);
     end
 
     //De dos ciclos a medio bit
-    width = t_clk * $urandom_range(max(8*dl_ef - 3, 2), 2);
+    width = t_clk * $urandom_range(max(8*dl_ef - 3, dl_ef + 2), dl_ef + 2);
 
     poner(1'b0, width); //El pulso falso
 
@@ -103,8 +104,6 @@ class ser_driver extends uvm_driver #(ser_seq_item);
   endtask 
 
   task trama(ser_seq_item item);
-    real pos, width;   //Posición y ancho del pulso de glitch
-    bit  bit_datos;      //Valor del bit de datos actual
     bit  par_bit;      //Bit de paridad a mandar
 
     //Pone la linea en 0 durante más de una trama
@@ -117,19 +116,9 @@ class ser_driver extends uvm_driver #(ser_seq_item);
     //Bit de inicio 
     poner(1'b0, t_bit);
 
-    //Bits de datos 
-    for (int i = 0; i < data_bits; i++) begin
-      bit_datos = item.data[i];
-      if (item.glitch == GLITCH_DATA && i == item.glitch_bit) begin
-        pos = t_bit / 8.0; //Arranca a 1/8 del bit
-        width = t_clk * $urandom_range(max(2*dl_ef, 1), 1); //Termina antes de 1/4 del bit
-        poner(bit_datos,  pos);
-        poner(!bit_datos, width);//El pulso invertido
-        poner(bit_datos,  t_bit - pos - width);
-      end
-      else
-        poner(bit_datos, t_bit);
-    end
+    //Bits de datos, LSB primero
+    for (int i = 0; i < data_bits; i++)
+      poner(item.data[i], t_bit);
 
     //Paridad en caso de estar habilitada
     if (pe) begin
@@ -203,24 +192,150 @@ class ser_monitor extends uvm_monitor;
   ser_agent_cfg ser_cfg;
   virtual ser_if ser_vif; //Referencia  a la interfaz del bus serial
 
+  uvm_analysis_port #(ser_seq_item) ser_mon_ap;
+  ser_dir_e linea = SER_RX;
+
   //Build phase del monitor
-    virtual function void build_phase(uvm_phase phase);
-    super.build_phase(phase);
-     ser_mon_ap = new("ser_mon_ap", this);
-    if (!uvm_config_db#(ser_agent_cfg)::get(this, "", "cfg", ser_cfg)) begin
+  virtual function void build_phase(uvm_phase phase);
+   super.build_phase(phase);
+   ser_mon_ap = new("ser_mon_ap", this);
+   if (!uvm_config_db#(ser_agent_cfg)::get(this, "", "cfg", ser_cfg)) begin
       `uvm_fatal("NO CFG", "Monitor sin ser_cfg")
+   end
+   ser_vif = ser_cfg.vif; //Se obtiene la referencia a la interfaz del bus serial
+  endfunction
+
+  //Estado interno
+  bit lin = 1'b1;//Último valor visto de la línea (reposo en 1)
+  longint unsigned ciclo;//clk_counter del último flanco
+  longint unsigned t_baja;//Ciclo en que empezó el carácter
+  int unsigned nb;//Copia del formato: bits de datos
+  int unsigned stop_half;//Copia del formato: parada en mitades de bit
+  int unsigned bc;//Ciclos de reloj por bit nominal
+  bit pe; //Copia del formato: paridad habilitada
+
+  //Avanza un ciclo y actualiza la linea 
+  task paso();
+   @(ser_vif.ser_monitor_cb);
+   ciclo = ser_vif.ser_monitor_cb.clk_counter;
+   lin   = (linea == SER_RX) ? ser_vif.ser_monitor_cb.srx_pad_i : ser_vif.ser_monitor_cb.stx_pad_o;
+  endtask
+
+  //Espera n cantidad de ciclos para luego avanzar y actualizar linea
+  task esperar(int unsigned n);
+    repeat (n) paso();
+  endtask
+
+  //Carga el formato 
+  function void cargar_formato();
+    nb = ser_cfg.data_bits;
+    stop_half = ser_cfg.stop_half;
+    pe = ser_cfg.pe;
+    bc = 16 * ((ser_cfg.dl == 0) ? 1 : ser_cfg.dl);   //Igual que el driver con DL = 0
+  endfunction
+  
+  //Se pone en reposo
+  task reposo();
+    while (lin != 1'b0) paso(); //Espera a ver la línea en 0: el bit de inicio
+    t_baja = ciclo; //Ciclo en que empezó el carácter
+  endtask
+
+  task decodificar(ser_seq_item it, output bit valido);
+    cargar_formato(); //Formato congelado para este carácter
+
+    //Validación del inicio a medio bit
+    esperar(bc / 2);
+    if (lin == 1'b1) begin //Volvió a 1: era un glitch, no un inicio
+      valido = 1'b0;
+      return;
     end
 
-    ser_vif = ser_cfg.vif; //Se obtiene la referencia a la interfaz del bus serial
-    endfunction 
+    //Datos, LSB primero, en el centro de cada bit
+    for (int i = 0; i < nb; i++) begin
+      esperar(bc);
+      it.data[i] = lin;
+    end
 
-    //Run phase del monitor
-    task run_phase(uvm_phase phase);
+    //Paridad, si el formato la usa
+    if (pe) begin
+      esperar(bc);
+      it.parity_bit = lin;
+    end
 
-    endtask
+    //Primer bit de parada
+    esperar(bc);
+    it.stop_ok = lin;
 
+    //Etiqueta del item
+    it.dir       = linea;
+    it.data_bits = nb;
+    valido       = 1'b1;
+  endtask
+
+  task cierre(ser_seq_item item);
+    int unsigned trama; //Duración de una trama completa, en ciclos
+
+    //Parada en 1: carácter normal
+    if (item.stop_ok) begin
+      reportar(item);
+      return;
+    end
+
+    //Parada en 0: error de trama o break. Se espera mirando la línea.
+    trama = (1 + nb + pe) * bc + stop_half * bc / 2;
+    while (lin == 1'b0 && (ciclo - t_baja) < trama)
+      paso();
+
+    if (lin == 1'b0) begin
+      //Siguió en 0 toda la trama: es un break
+      item.break_visto = 1'b1;
+      item.data        = '0;
+      item.parity_bit  = 1'b0;
+      reportar(item); //Se reporta ya, como hace el DUT
+      while (lin == 1'b0) paso(); //Espera el fin del break
+    end
+    else begin
+      //Subió antes: carácter con error de trama
+      reportar(item);
+    end
+  endtask
+
+  //Publica el item con el ciclo actual
+  function void reportar(ser_seq_item it);
+    it.cycle = ciclo;
+    ser_mon_ap.write(it);
+  endfunction
+
+  //Run phase del bus serial
+  task run_phase(uvm_phase phase);
+    ser_seq_item it;
+    bit valido;
+
+    //Espera el reset completo
+    wait (ser_vif.rst === 1'b1);
+    wait (ser_vif.rst === 1'b0);
+
+    forever begin
+      fork
+        //Hilo 1: decodifica caracteres uno tras otro
+        forever begin
+          reposo();//Espera un inicio
+          it = ser_seq_item::type_id::create("ser_mon_item");
+          decodificar(it, valido);//Lee los bits
+          if (valido)
+            cierre(it);//Trama, error o break, y reporta
+        end
+        //Hilo 2: reset en cualquier momento
+        @(posedge ser_vif.rst);
+      join_any
+      disable fork;//Corta el carácter a medias
+
+      //Hubo reset: se descarta lo que se estaba leyendo y se reinicia el estado
+      wait (ser_vif.rst === 1'b0);
+      lin = 1'b1;
+    end
+  endtask
 endclass: ser_monitor
-
 
 //Agente del bus serial
 class ser_agent extends uvm_agent;
@@ -236,7 +351,8 @@ class ser_agent extends uvm_agent;
 
   //Componentes
   ser_driver   ser_drvr;
-  ser_monitor  ser_mon;
+  ser_monitor  ser_mon_rx;
+  ser_monitor  ser_mon_tx;
   ser_seqr     ser_sequencer;
 
   //Puertos hacia el ambiente
@@ -266,7 +382,6 @@ class ser_agent extends uvm_agent;
   //Connect phase
     function void connect_phase(uvm_phase phase);
         super.connect_phase(phase);
-
     endfunction
 
 endclass: ser_agent
