@@ -15,7 +15,6 @@
 
 `ifndef UART_SEQS_SV
 `define UART_SEQS_SV
-
 // =======================================================
 // Secuencia para escritura de datos a THR
 // =======================================================
@@ -37,11 +36,6 @@
 
 
 // =======================================================
-// Secuencia para la generación de tráfico serial
-// =======================================================
-
-
-// =======================================================
 // Secuencia para señales modem
 // =======================================================
 
@@ -52,31 +46,23 @@
 // =======================================================
 class uart_main_vseq extends uvm_sequence;
     `uvm_object_utils(uart_main_vseq)
-
+    `uvm_declare_p_sequencer(uart_virtual_seqr)
+    
     // ===== Constructor con la fábrica =====
     function new(string name = "uart_main_vseq"); 
         super.new(name); 
     endfunction
 
-    // ===== Secuenciador que ejecuta la secuencia =====
-    `uvm_declare_p_sequencer(uart_virtual_seqr);
-
     // ===== Body de la secuencia =====
     task body();
-        int unsigned ep_index = 0;  // <= Contador de episodios
+            uart_dut_cfg dut_cfg = p_sequencer.env_cfg.dut_cfg;
 
-        repeat (env_cfg.stim.episodes) begin
-
-            if(ep == null) begin        // <= Reutiliza el mismo objeto para aplicar randc
-                ep      = spi_dut_cfg::type_id::create("ep");
-                ep.stim = cfg.stim;
+            if(!dut_cfg.randomize()) begin   // <= Aleatoriza la configuración del DUT
+                `uvm_fatal("RAND", "No fue posible aleatorizar la configuración del DUT.")
             end
 
-            if(!ep.randomize()) begin   // <= Aleatoriza la configuración del DUT
-                `uvm_fatal("RAND", "No fue posible aleatorizar el episodio (EP: %0d).", ep_index)
-            end
-
-            config_DUT(ep);
+            reset_DUT();
+            config_DUT(dut_cfg);
 
             // ===== Procesos de tráfico en paralelo =====
             fork
@@ -86,13 +72,21 @@ class uart_main_vseq extends uvm_sequence;
                 mod_traffic();
             join
 
+            // ===== Esperar fin de tx y rx =====
             wait_tx();
             wait_rx();
-
-            ep_index++;
-        end
     endtask
 
+    // ===== Proceso de reset del DUT =====
+    task reset_DUT();
+
+    endtask
+
+    // ===== Proceso de configuración =====
+    task config_DUT(uart_dut_cfg dut_cfg);
+
+
+    endtask
 endclass : uart_main_vseq
 
 `endif //UART_SEQS_SV
