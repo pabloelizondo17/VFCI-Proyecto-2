@@ -1,5 +1,5 @@
-`ifndef SER_AGENT_CFG_SV
-`define SER_AGENT_CFG_SV
+`ifndef SERIAL_AGENT_CFG_SV
+`define SERIAL_AGENT_CFG_SV
 
 //------------------------------------------------------------------------------------------------------
 //                   Apuntes: VALOR QUE QUIERO ALEATORIZAR
@@ -17,19 +17,19 @@
 // -baud_out_dev: Cuanta desviacion si va afuera
 //--------------------------------------------------------------------------------------------------------
 
-class ser_agent_cfg extends uvm_object;
+class serial_agent_cfg extends uvm_object;
   
   //Registro en fábrica
-  `uvm_object_utils(ser_agent_cfg)
+  `uvm_object_utils(serial_agent_cfg)
 
   //Handle a la interfaz real
-  virtual ser_if vif;
+  virtual serial_if vif;
 
   //Modo del agente
   uvm_active_passive_enum is_active = UVM_ACTIVE;
 
   //Line configuration
-  bit [15:0]   dl   = 16'd0;  //Divisor (DL = 0: sin actividad serial)
+  bit [15:0]   dl   = 16'd0;  //Divisor (DL = 0: sin actividad serialial)
   int unsigned data_bits = 8;      //5, 6, 7 u 8
   int unsigned stop_half   = 2;      //Bits de parada
   bit          pe   = 1'b0;   //LCR[3]
@@ -70,7 +70,7 @@ class ser_agent_cfg extends uvm_object;
   //Agregar limitaciones para que se cumpla min menor que max
 
   //Constructor
-  function new(string name = "ser_agent_cfg");
+  function new(string name = "serial_agent_cfg");
     super.new(name);
   endfunction
 
@@ -92,6 +92,13 @@ class ser_agent_cfg extends uvm_object;
     return 16 * dl;
   endfunction
 
-endclass: ser_agent_cfg
+  //Paridad esperada para un dato con el formato dado
+  function bit parity_of(bit [7:0] d, int unsigned nbits, bit ep, bit sp);
+    bit [7:0] m = d & ((8'h1 << nbits) - 1); //Solo los bits de datos usados
+    if (sp) return ~ep; //Paridad fija: EPS=0 -> 1, EPS=1 -> 0
+    return ep ? ^m : ~^m; //Par : impar
+  endfunction
 
-`endif //SER_AGENT_CFG_SV
+endclass: serial_agent_cfg
+
+`endif //SERIAL_AGENT_CFG_SV

@@ -1,11 +1,11 @@
-`ifndef SER_SEQUENCE_SV
-`define SER_SEQUENCE_SV
+`ifndef SERIAL_SEQUENCE_SV
+`define SERIAL_SEQUENCE_SV
 
-class ser_trafico extends uvm_sequence #(ser_seq_item);
-  `uvm_object_utils(ser_traffic_seq)
+class serial_trafico extends uvm_sequence #(serial_seq_item);
+  `uvm_object_utils(serial_trafico)
 
   //Configuración
-  ser_agent_cfg ser_cfg;
+  serial_agent_cfg serial_cfg;
 
   //Constructor
   
@@ -14,6 +14,6 @@ class ser_trafico extends uvm_sequence #(ser_seq_item);
   
   endtask
 
-endclass: ser_trafico
+endclass: serial_trafico
 
-`endif //SER_SEQUENCE_SV
+`endif //SERIAL_SEQUENCE_SV
