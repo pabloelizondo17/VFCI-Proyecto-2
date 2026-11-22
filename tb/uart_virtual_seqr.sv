@@ -24,7 +24,7 @@ class uart_virtual_seqr extends uvm_sequencer #(uvm_sequence_item);
     // ===== RAL y configuración =====
     uart_reg_block        reg_model;
     uart_virtual_seqr_cfg vseqr_cfg;
-    uart_env_cf           env_cfg;
+    uart_env_cfg          env_cfg;
 
     // ===== Constructor con la fábrica =====
     function new(string name = "uart_virtual_seqr", uvm_component parent = null); 
