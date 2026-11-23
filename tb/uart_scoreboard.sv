@@ -13,10 +13,10 @@ class uart_scoreboard extends uvm_scoreboard;
   `uvm_component_utils(uart_scoreboard)
 
   //Puertos
-  uvm_analysis_imp_wb #(wb_seq_item, uart_scoreboard) wb_imp; // wb_agent.wb_mon_ap
-  uvm_analysis_imp_ser_drv #(ser_seq_item, uart_scoreboard) ser_drv_imp; // ser_agent.ser_drv_ap
-  uvm_analysis_imp_ser_tx #(ser_seq_item, uart_scoreboard) ser_tx_imp; // ser_agent.ser_tx_ap
-  uvm_analysis_imp_mod #(mod_seq_item, uart_scoreboard) mod_imp; // mod_agent.mod_agent_ap
+  uvm_analysis_imp_wb #(wb_seq_item, uart_scoreboard) wb_imp; 
+  uvm_analysis_imp_ser_drv #(serial_seq_item, uart_scoreboard) serial_drv_imp; 
+  uvm_analysis_imp_ser_tx #(ser_seq_item, uart_scoreboard) serial_tx_imp; 
+  uvm_analysis_imp_mod #(mod_seq_item, uart_scoreboard) mod_imp; 
 
   //Configuración
   uart_scoreboard_cfg cfg;
@@ -75,16 +75,57 @@ class uart_scoreboard extends uvm_scoreboard;
   function void write_wb(wb_seq_item t);
   endfunction
 
-  // Carácter enviado por srx: entra a rx_q con sus errores
-  function void write_ser_drv(ser_seq_item t);
+  // Carácter enviado por srx, entra a cola rx_q con sus errores
+  function void write_ser_tx(serial_seq_item item);
+    if (in_reset) return;
+    if (item.break_visto) return; //Cuando hay un break no se trae un dato que comparar 
+    check_tx(item);  
   endfunction
 
-  // Carácter visto en stx: llama a check_tx
-  function void write_ser_tx(ser_seq_item t);
+  // Carácter visto en stx, llama a check_tx
+  function void write_ser_driver(serial_seq_item item);
+    rx_entry_t entrada; //Entrada del scoreboard 
+    int dev //Desviacion
+
+    if (in_reset) return; 
+    if (mcr[4]) return; //Cuanod hay loopback el receptor ignora srx
+    if (dl == 0) return; //DL = 0, receptor detenido 
+
+    //Con FIFO llena el caracter se pierde y queda overrun 
+    if (rx_q.size() == 16) begin
+      lsr_oe = 1;
+      return;  
+    end
+    
+    //Calculo valor absoulto de la desviación
+    dev = (item.baud_dev_pct < 0) ? -item.baud_dev_pct : item.baud_dev_pct;
+
+    //Break, DUT guarda 0x00 con BI = 1, sin error de paridad ni trama
+    if (item.is_break) begin 
+      entrada.data = 8'00;
+      entrada.pe = 0;
+      entrada.fe = 0;
+      entrada.bi = 1; 
+    end
+    else begin
+      entrada.data = item.data & ((1 << item.data_bits)-1) //bits altos en 0
+      entrada.pe = item.parity_err;  
+      entrada.fe = item.frame_err; 
+      entrada.bi = 0;
+    end
+    entrada.compare = (dev <= cfg.baud_toñ); //No compara el dato si esta fuera de tolerancia       
   endfunction
 
   // Cambio en los pines del módem: actualiza msr_pins y msr_delta
-  function void write_mod(mod_seq_item t);
+  function void write_mod(mod_seq_item item);
+    bit [3:0] pines_nuevos; 
+    pines_nuevos = {item.dcd_pad_i, item.ri_pad_i, item.dst_pad_i, item.cts_pad_i};
+
+    //Hubo un cambio en el pin desde la última lectuta de MSR
+    if (!in_reset)
+      msr_delta = msr_delta | (pines nuevos ^ msr_pins);
+    msr_pins = pines_nuevos
+
   endfunction
 
   //Modelo de referencia
@@ -100,22 +141,49 @@ class uart_scoreboard extends uvm_scoreboard;
     end 
   endtask
 
-  // Valores de reset: LCR = 0x03, IER = 0, MCR = 0, DL = 0, nivel 14, colas vacías
+  // Valores de los registros luego de reset
   function void reset_model();
+    lcr = 8'h03;
+    ier = 8'h00;
+    mcr = 8'h00;
+    scratch = 8'h00; 
+    dl = 16'h0000;
+    fcr_tl = 2'b11;
+    exp_tx.delete(); //Borra cola, lo que había se pierde
+    rx_q.delete();  //Borra cola, lo que había se pierde
+    lsr_oe = 0;
+    msr_delta = 4'h0;
   endfunction
 
   // Escritura por Wishbone: LCR, DL (con DLAB), IER, FCR, MCR, THR y scratch
-  function void do_write(wb_seq_item t);
+  function void do_write(wb_seq_item item);
   endfunction
 
   // Efecto de una lectura: sacar de RBR, limpiar errores de LSR y deltas de MSR
-  function void read_effects(wb_seq_item t);
+  function void read_effects(wb_seq_item item);
   endfunction
 
   //Chequeos
 
-  //El carácter en stx tiene el dato del primero de exp_tx, en orden
-  function void check_tx(ser_seq_item t);
+  //El carácter en stx tiene el dato del primero de esperado, en orden
+  function void check_tx(ser_seq_item item);
+    tx_entry_t esperado; 
+    bit [7:0] mascara;
+
+    //Si el caracter que sale no tiene comapare = 0 queda eliminado
+    while (esperado.size() > 0 && !esperado[0].compare && esperado[0].data != item.data)
+      void'(esperado.pop_front());
+
+      if (esperado.size() == 0) begin
+        `uvm_error("CHECK_TX", $sformatf("Salio 0x%02h por stx y nadie lo escribió en THR", item.data))
+        return;   
+      end
+
+      esperado = esperado.pop_front();
+      mascara = (1 << item.data_bits) - 1; //Solo se transmiten los bits de LCR
+
+      if ((item.data & mascara) != (esperado.data & mascara))
+      `uvm_error("CHECK_TX", $sformatf("stx: salió 0x%02h, se esperaba 0x%02h", item.data & mascara, esperado.data & mascara))   
   endfunction
 
   //la lectura de RBR devuelve el primero de rx_q, en orden
