@@ -55,11 +55,18 @@ class uart_scoreboard extends uvm_scoreboard;
 
   //Build phase
   function void build_phase(uvm_phase phase);
-  endfunction
+    super.build_phase(phase);
+    if (!uvm_config_db#(uart_scoreboard_cfg)::get(this, "", "cfg", cfg))
+      `uvm_fatal("NOCFG", "Scoreboard no encontró su cfg")
+    vif = cfg.vif;
+    if (vif == null)
+      `uvm_fatal("NOVIF", "la cfg del scoreboard no tiene vif")
+    reset_model();
+  endfunction 
 
   //Run phase
-  // Vigila el reset de la vif
   task run_phase(uvm_phase phase);
+    watch_reset();
   endtask
 
   //Entradas de los monitores
@@ -82,9 +89,15 @@ class uart_scoreboard extends uvm_scoreboard;
 
   //Modelo de referencia
 
-  // Cada flanco de rst reinicia el modelo; las lecturas siguientes
-  // verifican los valores de reset (CHK-RST)
+  // Cada flanco de rst reinicia el modelo
   task watch_reset();
+    forever begin
+      @(posedge vif.rst);
+      in_reset = 1; 
+      reset_model();
+      @(negedge vif.rst);
+      in_reset = 0; 
+    end 
   endtask
 
   // Valores de reset: LCR = 0x03, IER = 0, MCR = 0, DL = 0, nivel 14, colas vacías
