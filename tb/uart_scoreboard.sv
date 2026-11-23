@@ -3,173 +3,139 @@
 
 // uart_scoreboard.sv
 
+//Un puerto de análisis por monitor
+`uvm_analysis_imp_decl(_wb)
+`uvm_analysis_imp_decl(_ser_drv)
+`uvm_analysis_imp_decl(_ser_tx)
+`uvm_analysis_imp_decl(_mod)
+
 class uart_scoreboard extends uvm_scoreboard;
   `uvm_component_utils(uart_scoreboard)
+
+  //Puertos
+  uvm_analysis_imp_wb #(wb_seq_item, uart_scoreboard) wb_imp; // wb_agent.wb_mon_ap
+  uvm_analysis_imp_ser_drv #(ser_seq_item, uart_scoreboard) ser_drv_imp; // ser_agent.ser_drv_ap
+  uvm_analysis_imp_ser_tx #(ser_seq_item, uart_scoreboard) ser_tx_imp; // ser_agent.ser_tx_ap
+  uvm_analysis_imp_mod #(mod_seq_item, uart_scoreboard) mod_imp; // mod_agent.mod_agent_ap
 
   //Configuración
   uart_scoreboard_cfg cfg;
   virtual wb_if vif;
 
+  //Tipos
+  // Carácter recibido por srx
+  typedef struct { bit [7:0] data; bit pe, fe, bi; bit compare;} rx_entry_t;
+
+  // Carácter que debe salir por stx
+  typedef struct {bit [7:0] data; bit compare;} tx_entry_t;
+
+  //Registros del modelo
+  bit [7:0] lcr, ier, mcr, scratch;
+  bit [15:0] dl;
+  bit [1:0] fcr_tl; // nivel de disparo RX
+  bit in_reset;
+
+  //Colas
+  tx_entry_t exp_tx[$]; //escrito en THR que todavía no sale por stx
+  rx_entry_t rx_q[$]; //recibido por srx que todavía no se lee de RBR
+
+  //LSR y MSR
+  bit lsr_oe; // overrun pendiente
+  bit [3:0] msr_pins; // {dcd, ri, dsr, cts}
+  bit [3:0] msr_delta; // {ddcd, teri, ddsr, dcts}
+
   //Constructor
-  // Crea las FIFOs de análisis y las FIFOs del modelo
   function new(string name, uvm_component parent);
     super.new(name, parent);
+    wb_imp = new("wb_imp", this);
+    ser_drv_imp = new("ser_drv_imp", this);
+    ser_tx_imp = new("ser_tx_imp", this);
+    mod_imp = new("mod_imp", this);
   endfunction
 
   //Build phase
-  // Obtiene la cfg y la vif, y pone el modelo en valores de reset
   function void build_phase(uvm_phase phase);
   endfunction
 
   //Run phase
-  // Arranca los recolectores en paralelo y el lazo principal
+  // Vigila el reset de la vif
   task run_phase(uvm_phase phase);
   endtask
 
-  //Recolectores: cada transacción se vuelve un evento con su ciclo
+  //Entradas de los monitores
 
-  // Mete un evento en la cola; avisa si llega para un ciclo ya procesado (lag corto)
-  function void push_evt(uart_evt e);
+  // Escritura: actualiza el modelo. Lectura: llama al chequeo según la dirección
+  function void write_wb(wb_seq_item t);
   endfunction
 
-  // Escrituras y lecturas del monitor Wishbone
-  task collect_wb();
-  endtask
+  // Carácter enviado por srx: entra a rx_q con sus errores
+  function void write_ser_drv(ser_seq_item t);
+  endfunction
 
-  // Caracteres que manda el driver serial por srx; se usa para verificar RX
-  // porque trae los errores inyectados y baud_dev_pct (plan 10, fila "Datos RX")
-  task collect_ser_drv();
-  endtask
+  // Carácter visto en stx: llama a check_tx
+  function void write_ser_tx(ser_seq_item t);
+  endfunction
 
-  // Caracteres que ve el monitor de stx
-  task collect_ser_tx();
-  endtask
+  // Cambio en los pines del módem: actualiza msr_pins y msr_delta
+  function void write_mod(mod_seq_item t);
+  endfunction
 
-  // Cambios en los pines del módem
-  task collect_mod();
-  endtask
+  //Modelo de referencia
 
-  // Cambios de int_o
-  task collect_intr();
-  endtask
-
-  // Cada flanco de rst de la vif se vuelve un evento, igual que en los agentes
-  // (plan 10, fila "Estado tras reset")
+  // Cada flanco de rst reinicia el modelo; las lecturas siguientes
+  // verifican los valores de reset (CHK-RST)
   task watch_reset();
   endtask
 
-  //Lazo principal
-
-  // En cada ciclo procesa los eventos que ya quedaron atrás del lag
-  task main_loop();
-  endtask
-
-  // Procesa, en orden, todos los ciclos con eventos hasta el horizonte
-  function void process_until(longint unsigned horizon);
-  endfunction
-
-  // Procesa los eventos de un ciclo, ordenados por prioridad
-  function void process_cycle(longint unsigned c);
-  endfunction
-
-  //Despachador
-
-  // Manda cada evento a su función: entradas -> predict, salidas -> check
-  function void dispatch(uart_evt e);
-  endfunction
-
-  //Modelo de referencia (predict_*)
-
-  // Valores de reset de registros, FIFOs y esperados (F-REG-01)
+  // Valores de reset: LCR = 0x03, IER = 0, MCR = 0, DL = 0, nivel 14, colas vacías
   function void reset_model();
   endfunction
 
-  // Reset asíncrono: valores de reset y descarta los esperados pendientes (V-RST-01)
-  function void predict_reset(bit rst_val, longint unsigned c);
+  // Escritura por Wishbone: LCR, DL (con DLAB), IER, FCR, MCR, THR y scratch
+  function void do_write(wb_seq_item t);
   endfunction
 
-  // Escrituras por Wishbone: LCR, DL, IER, FCR, MCR, THR y scratch (V-REG-03)
-  function void predict_write(wb_seq_item t);
+  // Efecto de una lectura: sacar de RBR, limpiar errores de LSR y deltas de MSR
+  function void read_effects(wb_seq_item t);
   endfunction
 
-  // Valor y máscara esperados de una lectura, con el estado antes de leer
-  function uart_rd_exp_t predict_read(wb_seq_item t);
-  endfunction
+  //Chequeos
 
-  // Efectos de una lectura: sacar de RBR, limpiar LSR y MSR, THRE por IIR
-  function void predict_read_effects(wb_seq_item t);
-  endfunction
-
-  // Carácter que entra a la FIFO RX con sus errores (plan 10, fila "Datos RX")
-  function void predict_rx_push(ser_seq_item t, longint unsigned c);
-  endfunction
-
-  // Resincroniza los tiempos previstos de TX con el carácter visto en stx
-  function void predict_tx_obs(ser_seq_item t);
-  endfunction
-
-  // Pines del módem: MSR, deltas y su interrupción (plan 10, fila "MSR")
-  function void predict_modem(mod_seq_item t);
-  endfunction
-
-  // Lo que depende solo del tiempo: TX (THRE, TEMT), timeout y cambios vencidos
-  function void advance_time(longint unsigned c);
-  endfunction
-
-  //Checker (check_*)
-
-  // Compara una lectura según su dirección: (obs & mask) == (exp & mask)
-  function void check_read(wb_seq_item t, uart_rd_exp_t rd_exp);
-  endfunction
-
-  // CHK-TX: carácter en stx contra el esperado (plan 10, fila "Datos TX")
+  //El carácter en stx tiene el dato del primero de exp_tx, en orden
   function void check_tx(ser_seq_item t);
   endfunction
 
-  // CHK-MODOUT: cambios de rts y dtr contra MCR (plan 10, fila "Salidas rts/dtr")
-  function void check_modout(mod_seq_item t);
+  //la lectura de RBR devuelve el primero de rx_q, en orden
+  function void check_rbr(wb_seq_item t);
   endfunction
 
-  // CHK-INT: cambios de int_o; exacto para causas del bus y del módem,
-  // ventana para srx y timeout (plan 10, fila "int_o")
-  function void check_int(mod_intr_item t);
+  //DR, errores (PE, FE, BI, OE), THRE y TEMT, solo los bits seguros
+  function void check_lsr(wb_seq_item t);
   endfunction
 
-  // CHK-END: nada pendiente al final y niveles de FIFOs (plan 10, fila "Niveles de FIFOs")
-  function void check_end();
+  //Interrupción de mayor prioridad habilitada
+  function void check_iir(wb_seq_item t);
   endfunction
 
-  //Utilidades
-
-  // Cuenta el error y lo reporta con el nombre del chequeo
-  function void err(uart_chk_e k, string msg);
+  //Pines actuales y deltas; en loopback refleja MCR
+  function void check_msr(wb_seq_item t);
   endfunction
 
-  // Ciclos de un bit con el DL actual (16 * DL)
-  function longint unsigned bit_cycles();
+  //LCR, IER, DL y scratch devuelven lo escrito; MCR se lee como 0
+  function void check_reg(wb_seq_item t);
   endfunction
 
-  // Ciclos de una trama completa con el LCR actual
-  function longint unsigned frame_cycles();
-  endfunction
-
-  // Retraso del procesamiento: el mayor entre lag_min y lag_frames tramas
-  function longint unsigned lag_cycles();
-  endfunction
-
-  // El driver publica al terminar la trama, pero el DUT guarda el carácter en
-  // el centro del bit de parada: se corrige la estampa
-  function longint unsigned rx_push_cycle(ser_seq_item t);
+  //Verificacion de debug 1 y 2 coinciden con el modelo
+  function void check_dbg(wb_seq_item t);
   endfunction
 
   //Check phase
-  // Procesa lo que quedó en la cola y hace las revisiones de cierre
   function void check_phase(uvm_phase phase);
   endfunction
 
   //Report phase
-  // Imprime el resumen por chequeo
   function void report_phase(uvm_phase phase);
   endfunction
+
 endclass
 `endif //UART_SCOREBOARD_SV
