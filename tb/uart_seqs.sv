@@ -4,13 +4,23 @@
 //  Proceso de configuración: config_DUT
 //
 //  Procesos principales:
-//      - 
+//      - reset_DUT
+//      - config_DUT
+//      - traffic_and_drain
 // -------------------------------------------------------
 //  Secuencia virtual principal:
 //      - uart_main_vseq
 //
+//  Secuencia virtual base:
+//      - uart_base_vseq
+//
 //  Otras secuencias virtuales:
-//      - uart_main_vseq
+//      - uart_wb_traffic_vseq
+//      - uart_serial_traffic_vseq
+//      - uart_modem_traffic_vseq
+//      - uart_status_vseq
+//      - uart_polling_vseq
+//      - uart_int_attend_vseq
 // =======================================================
 
 
@@ -79,6 +89,18 @@ class uart_base_vseq extends uvm_sequence;
         ral.reset();
     endtask
 
+    // ===== Porcentaje de cambio en el bit (Modem)===== 
+    // (0 no cambia y 1 si cambia): Orden (dcd, ri, dsr, cts)
+    virtual function bit [3:0] pick_toggles();
+        bit [3:0] t;
+
+        for (int i = 0; i < 4; i++) begin
+            t[i] = ($urandom_range(99) < stim_cfg.modem_toggle_pct); 
+        end   
+
+        return t; 
+    endfunction 
+
     // ... wait_cycles, etc.
 endclass : uart_base_vseq
 
@@ -86,7 +108,7 @@ endclass : uart_base_vseq
 // =======================================================
 //  Secuencia para escritura de datos a THR
 // =======================================================
-class uart_wb_traffic_vseq extends uart_base_vseq #(wb_item_t);
+class uart_wb_traffic_vseq extends uart_base_vseq;
     `uvm_object_utils(uart_wb_traffic_vseq)
 
     // ===== Constructor con la fábrica =====
@@ -96,7 +118,7 @@ class uart_wb_traffic_vseq extends uart_base_vseq #(wb_item_t);
 
     // ===== Body de la secuencia =====
     task body();
-        repeat(stim_cfg.n_stim) begin
+        repeat(stim_cfg.wb_n_stim) begin
 
             if (!ral.thr.randomize()) begin
                 `uvm_fatal("THR", "Aleatorización de THR falló.")
@@ -121,8 +143,43 @@ class uart_serial_traffic_vseq extends uart_base_vseq #();
 
     // ===== Body de la secuencia =====
     task body();
+        int unsigned mag;
+        int          sign_mult;
 
+        repeat (stim_cfg.ser_n_items) begin
+            serial_seq_item ser_item = serial_seq_item::type_id::create("ser_item");
 
+            start_item(ser_item, -1, p_sequencer.serial_seqr_0);
+                ser_item.data = $urandom;
+                sign_mult     = ($urandom_range(1, 0) == 0) ? -1 : 1;  // Selección aleatoria del signo
+
+                // Primero se determina si el carácter es un break
+                ser_item.is_break = ($urandom_range(99) < stim_cfg.ser_break_pct);
+
+                // Los errores de trama y paridad se anulan durante un carácter tipo break
+                ser_item.parity_err = !ser_item.is_break && ($urandom_range(99) < stim_cfg.ser_parity_err_pct);
+                ser_item.frame_err  = !ser_item.is_break && ($urandom_range(99) < stim_cfg.ser_frame_err_pct);
+
+                ser_item.gap        = $urandom_range(stim_cfg.ser_gap_max, stim_cfg.ser_gap_min);
+                ser_item.break_len  = $urandom_range(stim_cfg.ser_break_len_max, stim_cfg.ser_break_len_min);
+
+                if ($urandom_range(99) < stim_cfg.ser_glitch_pct) begin
+                    ser_item.glitch = GLITCH_START;
+                end else begin
+                    ser_item.glitch = GLITCH_NONE;
+                end
+
+                if ($urandom_range(99) < stim_cfg.ser_baud_out_pct) begin
+                    // Fuera de tolerancia
+                    mag = $urandom_range(stim_cfg.ser_baud_out_dev_max, stim_cfg.ser_baud_out_dev_min);
+                end else begin
+                    // Dentro de tolerancia
+                    mag = $urandom_range(stim_cfg.ser_baud_dev_max, stim_cfg.ser_baud_dev_min);
+                end
+
+                ser_item.baud_dev_pct = (mag == 0) ? 0 : (sign_mult * int'(mag));
+            finish_item(ser_item);
+        end
     endtask
 endclass : uart_serial_traffic_vseq
 
@@ -130,6 +187,46 @@ endclass : uart_serial_traffic_vseq
 // =======================================================
 //  Secuencia para señales modem
 // =======================================================
+class uart_modem_traffic_vseq extends uart_base_vseq #(mod_seq_item);
+    `uvm_object_utils(uart_modem_traffic_vseq)
+
+    // ===== Incializa valor del estado de cada línea ===== 
+    bit dsr_ultimo = 1'b0;
+    bit ri_ultimo  = 1'b0;
+    bit cts_ultimo = 1'b0;
+    bit dcd_ultimo = 1'b0;
+
+    // ===== Constructor con la fábrica =====
+    function new(string name = "mod_sequence"); 
+        super.new(name); 
+    endfunction
+
+    // ===== Body de la secuencia =====
+    task body();
+        bit [3 : 0] toggle;
+
+        repeat (stim_cfg.modem_n_items) begin
+            mod_seq_item req    = mod_seq_item::type_id::create("req");
+                         toggle = pick_toggles();
+            
+            start_item(req, -1, p_sequencer.mod_seqr_0);
+                req.cts_pad_i = toggle[0] ? !cts_ultimo : cts_ultimo;
+                req.dsr_pad_i = toggle[1] ? !dsr_ultimo : dsr_ultimo;
+                req.ri_pad_i  = toggle[2] ? !ri_ultimo  : ri_ultimo;
+                req.dcd_pad_i = toggle[3] ? !dcd_ultimo : dcd_ultimo;
+
+                req.delay = $urandom_range(stim_cfg.modem_toggle_delay_max, 
+                                           stim_cfg.modem_toggle_delay_min);
+            finish_item(req);
+
+            // ===== Registro de lo que mandó  ===== 
+            cts_ultimo = req.cts_pad_i;
+            dsr_ultimo = req.dsr_pad_i;
+            ri_ultimo  = req.ri_pad_i;
+            dcd_ultimo = req.dcd_pad_i;
+        end
+    endtask
+endclass : uart_modem_traffic_vseq
 
 
 // =======================================================
@@ -138,7 +235,7 @@ endclass : uart_serial_traffic_vseq
 class uart_status_vseq extends uart_base_vseq;
     `uvm_object_utils(uart_status_vseq)
 
-    bit stop;
+    bit stop = 0;
 
     // ===== Constructor con la fábrica =====
     function new(string name = "uart_status_vseq"); 
@@ -150,7 +247,7 @@ class uart_status_vseq extends uart_base_vseq;
         uvm_reg_data_t reg_value;
 
         while (!stop) begin
-            wait_cycles($urandom_range(stim_cfg.status_gap_max, stim_cfg.status_gap_min));
+            wait_cycles($urandom_range(stim_cfg.wb_status_gap_max, stim_cfg.wb_status_gap_min));
 
             randcase
                 // Registro de interes: LSR, MSR, DBG1, DBG2, SR
@@ -169,12 +266,12 @@ endclass : uart_status_vseq
 // =======================================================
 //  Secuencia para polling en RBR
 // -------------------------------------------------------
-//   - Depende de polling_status en uart_stim_cfg
+//   - Depende de wb_polling_status en uart_stim_cfg
 // =======================================================
 class uart_polling_vseq extends uart_base_vseq;
     `uvm_object_utils(uart_polling_vseq)
 
-    bit stop;
+    bit stop = 0;;
 
     // ===== Constructor con la fábrica =====
     function new(string name = "uart_polling_vseq"); 
@@ -186,7 +283,7 @@ class uart_polling_vseq extends uart_base_vseq;
         uvm_reg_data_t reg_value;
 
         while (!stop) begin
-            wait_cycles($urandom_range(stim_cfg.polling_max, stim_cfg.polling_min));
+            wait_cycles($urandom_range(stim_cfg.wb_polling_max, stim_cfg.wb_polling_min));
 
             r_reg(ral.rbr, reg_value);
         end
@@ -196,8 +293,11 @@ endclass : uart_polling_vseq
 
 // =======================================================
 //  Secuencia para atender interrupciones
+// -------------------------------------------------------
+//   - Depende de wb_polling_status en uart_stim_cfg
 // =======================================================
-
+class uart_int_attend_vseq extends uart_base_vseq;
+endclass : uart_int_attend_vseq
 
 
 // =======================================================
@@ -215,8 +315,12 @@ class uart_main_vseq extends uart_base_vseq;
 
     // ===== Body de la secuencia =====
     task body();
-        uart_wb_traffic_vseq     wb_traffic     = uart_wb_traffic_vseq::type_id::create("wb_traffic");
-        uart_serial_traffic_vseq serial_traffic = uart_serial_traffic_vseq::type_id::create("serial_traffic");
+        uart_wb_traffic_vseq     wb_traffic_seq     = uart_wb_traffic_vseq::type_id::create("wb_traffic");
+        uart_serial_traffic_vseq serial_traffic_seq = uart_serial_traffic_vseq::type_id::create("serial_traffic");
+        uart_modem_traffic_vseq  modem_traffic_seq  = uart_modem_traffic_vseq::type_id::create("modem_traffic");
+        uart_status_vseq         status_seq         = uart_status_vseq::type_id::create("status");
+        uart_polling_vseq        polling_seq        = uart_polling_vseq::type_id::create("polling");
+        uart_int_attend_vseq     int_attend_seq     = uart_int_attend_vseq::type_id::create("int_attend");
 
         if(!dut_cfg.randomize()) begin   // <= Aleatoriza la configuración del DUT
             `uvm_fatal("RAND", "No fue posible aleatorizar la configuración del DUT.")
@@ -227,17 +331,29 @@ class uart_main_vseq extends uart_base_vseq;
 
         // ===== Secuencias de tráfico en paralelo =====
         fork
-            wb_traffic.start(p_sequencer, this);
-            serial_traffic.start(p_sequencer, this);
+            begin : traffic_and_drain
+                fork
+                    wb_traffic_seq.start(p_sequencer, this);
+                    serial_traffic_seq.start(p_sequencer, this);
+                    modem_traffic_seq.start(p_sequencer, this);
+                join
 
+                // ===== Esperar fin de tx y rx =====
+                wait_tx();
+                wait_rx();
 
-            //wb_int_service();
-            //mod_traffic();
+                status_seq.stop     = 1;
+                polling_seq.stop    = 1;
+                int_attend_seq.stop = 1;
+            end
+
+            int_attend_seq.start(p_sequencer, this);
+            status_seq.start(p_sequencer, this);
+
+            if(stim_cfg.polling_status) begin
+                polling_seq.start(p_sequencer, this);
+            end
         join
-
-        // ===== Esperar fin de tx y rx =====
-        wait_tx();
-        wait_rx();
     endtask
 
     // ===== Proceso de configuración =====
