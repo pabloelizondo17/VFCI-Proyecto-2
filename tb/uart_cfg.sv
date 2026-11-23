@@ -279,12 +279,14 @@ class uart_stim_cfg extends uvm_object;
     `uvm_object_utils(uart_stim_cfg)
 
     // ===== Knobs para estímulos por Wishbone =====
-    int unsigned wb_n_stim_min     = 30;
-    int unsigned wb_n_stim_max     = 150
-    int unsigned wb_status_gap_min = 5;
-    int unsigned wb_status_gap_max = 15;
-    int unsigned wb_polling_min    = 10;
-    int unsigned wb_polling_max    = 25;
+    int unsigned wb_n_stim_min        = 30;
+    int unsigned wb_n_stim_max        = 150
+    int unsigned wb_status_gap_min    = 5;
+    int unsigned wb_status_gap_max    = 15;
+    int unsigned wb_polling_min       = 10;
+    int unsigned wb_polling_max       = 25;
+    int unsigned sw_service_delay_max = 15;
+    int unsigned sw_service_delay_min = 0;
 
     // ===== Parámetros para estímulos por Wishbone =====
     rand int unsigned wb_n_stim;
@@ -398,11 +400,41 @@ endclass : uart_stim_cfg
 //  Clase de configuración para el ambiente
 // -------------------------------------------------------
 //  Lee los plusargs y agrupa:
-//      -
-//      -
-//      -
+//      - wb_agent_cfg
+//      - mod_agent_cfg
+//      - serial_agent_cfg
+//      - uart_stim_cfg
+//      - uart_scoreboard_cfg
+//      - uart_dut_cfg
+//      - 
+//      - 
 // =======================================================
 class uart_env_cfg extends uvm_object;
+    `uvm_object_utils(uart_env_cfg)
+
+    wb_agent_cfg        wb_cfg;
+    mod_agent_cfg       mod_cfg;
+    serial_agent_cfg    serial_cfg;
+    uart_stim_cfg       stim_cfg;
+    uart_scoreboard_cfg scoreboard_cfg;
+    uart_dut_cfg        dut_cfg;
+
+    // ===== Constructor con la fábrica =====
+    function new(string name = "uart_env_cfg");
+        super.new(name);
+
+        wb_cfg         = wb_agent_cfg::type_id::create("wb_cfg");
+        mod_cfg        = mod_agent_cfg::type_id::create("mod_cfg");
+        serial_cfg     = serial_agent_cfg::type_id::create("serial_cfg");
+        stim_cfg       = uart_stim_cfg::type_id::create("stim_cfg");
+        scoreboard_cfg = uart_scoreboard_cfg::type_id::create("scoreboard_cfg");
+        dut_cfg        = uart_dut_cfg::type_id::create("dut_cfg");
+   endfunction
+
+    // ===== Lectura de plusargs =====
+    function void parse_plusargs();
+
+    endfunction
 
 endclass : uart_dut_cfg
 

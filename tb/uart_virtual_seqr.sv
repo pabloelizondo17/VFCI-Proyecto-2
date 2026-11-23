@@ -26,6 +26,9 @@ class uart_virtual_seqr extends uvm_sequencer #(uvm_sequence_item);
     uart_virtual_seqr_cfg vseqr_cfg;
     uart_env_cfg          env_cfg;
 
+    // ===== Puertos de análisis para interrupciones =====
+    uvm_tlm_analysis_fifo #(mod_intr_item) intr_fifo;
+
     // ===== Constructor con la fábrica =====
     function new(string name = "uart_virtual_seqr", uvm_component parent = null); 
         super.new(name, parent); 
