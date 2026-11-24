@@ -132,17 +132,14 @@ endclass: serial_agent_cfg
 class uart_dut_cfg extends uvm_object;
     `uvm_object_utils(uart_dut_cfg)
 
-    typedef int unsigned w4_t[4];
-    typedef int unsigned w2_t[2];
-
     uart_stim_cfg stim;
 
     // ===== Knobs modificados por plusargs =====
-    int unsigned dl_min = 2, dl_max = 16'hFFFF;
+    int unsigned dl_min = 1, dl_max = 16'hFFFF;
 
-    w4_t fcr_tl_weights        = '{25, 25, 25, 25}; // [00=1,01=4,10=8,11=14] bytes
-    w4_t lcr_bits_char_weights = '{25, 25, 25, 25}; // [00=5,01=6,10=7,11=8] bits
-    w2_t mcr_loopback_weights  = '{90, 10};         // [normal,loopback]
+    int unsigned fcr_tl_weights[];         // [00=1,01=4,10=8,11=14] bytes
+    int unsigned lcr_bits_char_weights[];  // [00=5,01=6,10=7,11=8] bits
+    int unsigned mcr_loopback_weights[];   // [normal,loopback]
 
 
     // ===== Registros para configurar el DUT =====
@@ -179,7 +176,7 @@ class uart_dut_cfg extends uvm_object;
 
     // ===== Restricciones de IER =====
     constraint c_ier {
-        ier_rda  dist {1 := 100, 0 := 0};
+        // Nota: ier_rda es definido por c_stim_cross
         ier_thre dist {1 := 70,  0 := 30};
         ier_rls  dist {1 := 70,  0 := 30};
         ier_ms   dist {1 := 70,  0 := 30};
@@ -218,19 +215,21 @@ class uart_dut_cfg extends uvm_object;
     // ===== Variaciones según los estímulos =====
     constraint c_stim_cross {
         if (stim != null) {
-            // Polling => Sin interrupción de datos disponibles
-            if (stim.polling_status) begin
+            // Polling: sin interrupción de datos disponibles
+            if (stim.wb_polling_status) {
                 ier_rda == 1'b0;
-            end else begin                   
+            } else {
                 ier_rda == 1'b1;
-            end
+            }
 
-            if (stim.ser_parity_err_pct_min > 0) {
+            // Errores de paridad inyectados: paridad habilitada + intr
+            if (stim.ser_parity_err_pct > 0) {
                 lcr_pe  == 1'b1;
                 ier_rls == 1'b1;
             }
         }
 
+        // Sin paridad: EP y SP no tienen efecto
         if (!lcr_pe) {
             lcr_ep == 0;
             lcr_sp == 0;
@@ -265,6 +264,10 @@ class uart_dut_cfg extends uvm_object;
     // ===== Constructor con la fábrica =====
     function new(string name = "uart_dut_cfg");
         super.new(name); 
+
+        fcr_tl_weights        = '{25, 25, 25, 25};
+        lcr_bits_char_weights = '{25, 25, 25, 25};
+        mcr_loopback_weights  = '{90, 10};
     endfunction
 endclass : uart_dut_cfg
 
@@ -280,7 +283,7 @@ class uart_stim_cfg extends uvm_object;
 
     // ===== Knobs para estímulos por Wishbone =====
     int unsigned wb_n_stim_min        = 30;
-    int unsigned wb_n_stim_max        = 150
+    int unsigned wb_n_stim_max        = 150;
     int unsigned wb_status_gap_min    = 5;
     int unsigned wb_status_gap_max    = 15;
     int unsigned wb_polling_min       = 10;
@@ -298,7 +301,7 @@ class uart_stim_cfg extends uvm_object;
     int unsigned ser_parity_err_pct_max = 5;
     int unsigned ser_frame_err_pct_min  = 5; // Porcentaje de caracteres con el bit de frame en 0
     int unsigned ser_frame_err_pct_max  = 5;
-    int unsigned ser_break_pct_min      = 2; // Porcentaje de caracteres que en realidad son un break
+    int unsigned ser_break_pct_min      = 2; // Porcentaje de caracteres que son un break
     int unsigned ser_break_pct_max      = 2;
     int unsigned ser_glitch_pct_min     = 2; // Porcentaje de caracteres que llevan un pulso corto
     int unsigned ser_glitch_pct_max     = 2;
@@ -434,8 +437,9 @@ class uart_env_cfg extends uvm_object;
     // ===== Lectura de plusargs =====
     function void parse_plusargs();
 
-    endfunction
 
-endclass : uart_dut_cfg
+
+    endfunction
+endclass : uart_env_cfg
 
 `endif //UART_CFG_SV
