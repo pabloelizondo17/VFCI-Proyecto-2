@@ -432,13 +432,137 @@ class uart_env_cfg extends uvm_object;
         stim_cfg       = uart_stim_cfg::type_id::create("stim_cfg");
         scoreboard_cfg = uart_scoreboard_cfg::type_id::create("scoreboard_cfg");
         dut_cfg        = uart_dut_cfg::type_id::create("dut_cfg");
+
+        dut_cfg.stim = stim_cfg;
    endfunction
 
-    // ===== Lectura de plusargs =====
+
+   // ============== Funciones de utilidades para lectura ==============
+
+    // Obtener el valor de un plusarg como string
+    local function bit get_str(string name, output string val);
+        uvm_cmdline_processor clp = uvm_cmdline_processor::get_inst();
+
+        return clp.get_arg_value({"+", name, "="}, val) != 0;
+    endfunction
+
+    // Leer enteros sin signo
+    local function void knob_int(string name, ref int unsigned v);
+        string s;
+        int unsigned tmp;
+
+        if (get_str(name, s)) begin
+            if ($sscanf(s, "%d", tmp) != 1) begin
+                `uvm_fatal("KNOB", $sformatf("Valor invalido para +%s=%s", name, s))
+            end
+
+            v = tmp;
+        end
+    endfunction
+
+    // Leer enteros con signo (p. ej. ser_baud_dev_min/max son "int")
+    local function void knob_sint(string name, ref int v);
+        string s;
+        int tmp;
+
+        if (get_str(name, s)) begin
+            if ($sscanf(s, "%d", tmp) != 1) begin
+                `uvm_fatal("KNOB", $sformatf("Valor invalido para +%s=%s", name, s))
+            end
+
+            v = tmp;
+        end
+    endfunction
+
+    // Leer parámetros booleanos
+    local function void knob_bit(string name, ref bit v);
+        int unsigned t = v;
+        knob_int(name, t);
+        v = (t != 0);
+    endfunction
+
+    // Lee límites +name_MIN / +name_MAX
+    local function void knob_range(string name, ref int unsigned lo, ref int unsigned hi);
+        knob_int({name, "_MIN"}, lo);
+        knob_int({name, "_MAX"}, hi);
+
+        if (lo > hi) begin
+            `uvm_fatal("KNOB", $sformatf("Rango invalido para %s: MIN=%0d MAX=%0d", name, lo, hi))
+        end
+    endfunction
+
+    // Lee una lista "a,b,c" en un arreglo (el número de valores debe coincidir)
+    local function void knob_list(string name, ref int unsigned v[]);
+        string s, tok;
+        int idx;
+        int unsigned tmp;
+
+        if (get_str(name, s)) begin
+            idx = 0;
+            tok = "";
+
+            for (int i = 0; i <= s.len(); i++) begin
+                if ((i == s.len()) || (s[i] == 8'h2C)) begin
+                    if (tok.len() == 0)               `uvm_fatal("KNOB", $sformatf("Elemento vacio en +%s", name))
+                    if ($sscanf(tok, "%d", tmp) != 1) `uvm_fatal("KNOB", $sformatf("Valor invalido en +%s: %s", name, tok))
+                    if (idx < v.size())               v[idx] = tmp;
+
+                    idx++;
+                    tok = "";
+                end else begin
+                    tok = {tok, s.substr(i, i)};
+                end
+            end
+            if (idx != v.size()) begin
+                `uvm_fatal("KNOB", $sformatf("+%s necesita %0d valores, recibio %0d", name, v.size(), idx))
+            end
+        end
+    endfunction
+
+
+    // ============ Lectura de plusargs =============
+    // ----- Único punto de lectura de plusargs -----
     function void parse_plusargs();
+        // ----- Agente Wishbone -----
+        knob_range("UART_WB_DELAY",   wb_cfg.delay_min,      wb_cfg.delay_max);
+        knob_range("UART_WB_RST_CYC", wb_cfg.rst_cycles_min, wb_cfg.rst_cycles_max);
 
+        // ----- Agente Serial -----
+        knob_int("UART_SER_BAUD_TOL", serial_cfg.baud_tol);
 
+        // ----- DUT -----
+        knob_range("UART_DL",         dut_cfg.dl_min, dut_cfg.dl_max);
+        knob_list ("UART_FCR_TL_W",   dut_cfg.fcr_tl_weights);
+        knob_list ("UART_LCR_BITS_W", dut_cfg.lcr_bits_char_weights);
+        knob_list ("UART_MCR_LB_W",   dut_cfg.mcr_loopback_weights);
 
+        // ----- Estímulos Wishbone -----
+        knob_range("UART_STIM_WB_N",          stim_cfg.wb_n_stim_min,        stim_cfg.wb_n_stim_max);
+        knob_range("UART_STIM_WB_STATUS_GAP", stim_cfg.wb_status_gap_min,    stim_cfg.wb_status_gap_max);
+        knob_range("UART_STIM_WB_POLLING",    stim_cfg.wb_polling_min,       stim_cfg.wb_polling_max);
+        knob_range("UART_STIM_SW_SVC_DELAY",  stim_cfg.sw_service_delay_min, stim_cfg.sw_service_delay_max);
+
+        // ----- Estímulos Seriales -----
+        knob_range("UART_STIM_SER_PARITY_ERR_PCT", stim_cfg.ser_parity_err_pct_min, stim_cfg.ser_parity_err_pct_max);
+        knob_range("UART_STIM_SER_FRAME_ERR_PCT",  stim_cfg.ser_frame_err_pct_min,  stim_cfg.ser_frame_err_pct_max);
+        knob_range("UART_STIM_SER_BREAK_PCT",      stim_cfg.ser_break_pct_min,      stim_cfg.ser_break_pct_max);
+        knob_range("UART_STIM_SER_GLITCH_PCT",     stim_cfg.ser_glitch_pct_min,     stim_cfg.ser_glitch_pct_max);
+        knob_range("UART_STIM_SER_BAUD_OUT_PCT",   stim_cfg.ser_baud_out_pct_min,   stim_cfg.ser_baud_out_pct_max);
+        knob_sint ("UART_STIM_SER_BAUD_DEV_MIN",   stim_cfg.ser_baud_dev_min);
+        knob_sint ("UART_STIM_SER_BAUD_DEV_MAX",   stim_cfg.ser_baud_dev_max);
+        knob_range("UART_STIM_SER_BAUD_OUT_DEV",   stim_cfg.ser_baud_out_dev_min, stim_cfg.ser_baud_out_dev_max);
+        knob_range("UART_STIM_SER_GAP",            stim_cfg.ser_gap_min,          stim_cfg.ser_gap_max);
+        knob_range("UART_STIM_SER_BREAK_LEN",      stim_cfg.ser_break_len_min,    stim_cfg.ser_break_len_max);
+        knob_range("UART_STIM_SER_N_ITEMS",        stim_cfg.ser_n_items_min,      stim_cfg.ser_n_items_max);
+
+        // ----- Estímulos Módem -----
+        knob_range("UART_STIM_MODEM_TOGGLE_PCT",   stim_cfg.modem_toggle_pct_min,   stim_cfg.modem_toggle_pct_max);
+        knob_range("UART_STIM_MODEM_TOGGLE_DELAY", stim_cfg.modem_toggle_delay_min, stim_cfg.modem_toggle_delay_max);
+        knob_range("UART_STIM_MODEM_N_ITEMS",      stim_cfg.modem_n_items_min,      stim_cfg.modem_n_items_max);
+
+        // ----- Scoreboard -----
+
+        // ----- Cobertura -----
     endfunction
 endclass : uart_env_cfg
 
