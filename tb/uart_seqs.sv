@@ -525,7 +525,7 @@ class uart_main_vseq extends uart_base_vseq;
             int_attend_seq.start(p_sequencer, this);
             status_seq.start(p_sequencer, this);
 
-            if(stim_cfg.polling_status) begin
+            if(stim_cfg.wb_polling_status) begin
                 polling_seq.start(p_sequencer, this);
             end
         join
