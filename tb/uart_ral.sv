@@ -18,8 +18,6 @@
 //
 //      - DBG1 | 8  | R
 //      - DBG2 | 12 | R
-// -------------------------------------------------------
-// Objeto de configuración: uart_reg_block_cfg
 // =======================================================
 
 
@@ -278,10 +276,10 @@ class uart_msr_reg extends uvm_reg;
 
         //(padre, tamaño, pos. de lsb, acceso, volatil, 
         // valor rst, rst conocido, rand? y se accede solo)
-        dcts.configure(this, 1, 0, "RO", 1, 1'b0,  1, 0, 0);
-        ddsr.configure(this, 1, 1, "RO", 1, 1'b0,  1, 0, 0);
-        teri.configure(this, 1, 2, "RO", 1, 1'b0,  1, 0, 0);
-        ddcd.configure(this, 1, 3, "RO", 1, 1'b0,  1, 0, 0);
+        dcts.configure(this, 1, 0, "RC", 1, 1'b0,  1, 0, 0);
+        ddsr.configure(this, 1, 1, "RC", 1, 1'b0,  1, 0, 0);
+        teri.configure(this, 1, 2, "RC", 1, 1'b0,  1, 0, 0);
+        ddcd.configure(this, 1, 3, "RC", 1, 1'b0,  1, 0, 0);
         ccts.configure(this, 1, 4, "RO", 1, 1'b0,  0, 0, 0);
         cdsr.configure(this, 1, 5, "RO", 1, 1'b0,  0, 0, 0);
         cri .configure(this, 1, 6, "RO", 1, 1'b0,  0, 0, 0);
@@ -377,16 +375,16 @@ class uart_dbg1_reg extends uvm_reg;
         //(padre, tamaño, pos. de lsb, acceso, volatil, 
         // valor rst, rst conocido, rand? y se accede solo)
         lsr_v.configure(this, 8, 0,  "RO", 1, 8'h60, 1, 0, 0);
-        ier_v.configure(this, 4, 8,  "RO", 1, 4'h00, 1, 0, 0);
-        iir_v.configure(this, 4, 12, "RO", 1, 4'h01, 1, 0, 0);
+        ier_v.configure(this, 4, 8,  "RO", 1, 4'h0,  1, 0, 0);
+        iir_v.configure(this, 4, 12, "RO", 1, 4'h1,  1, 0, 0);
         lcr_v.configure(this, 8, 16, "RO", 1, 8'h03, 1, 0, 0);
-        msr_v.configure(this, 8, 24, "RO", 1, 8'h00, 1, 0, 0);
+        msr_v.configure(this, 8, 24, "RO", 1, 8'h00, 0, 0, 0);
     endfunction
 endclass : uart_dbg1_reg
 
 
 // ===== Registro DBG2 ===================================
-class uart_dbg2_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR
+class uart_dbg2_reg extends uvm_reg;
     `uvm_object_utils(uart_dbg2_reg)
 
     rand uvm_reg_field tstate, tf_count, rstate, rf_count, mcr_v, fcr_v;
@@ -407,12 +405,12 @@ class uart_dbg2_reg extends uvm_reg;    // <= PENDIENTE DE REVISAR
 
         //(padre, tamaño, pos. de lsb, acceso, volatil, 
         // valor rst, rst conocido, rand? y se accede solo)
-        tstate  .configure(this, 3, 0,  "RO", 1, 3'h00, 1, 0, 0);
+        tstate  .configure(this, 3, 0,  "RO", 1, 3'h0,  1, 0, 0);
         tf_count.configure(this, 5, 3,  "RO", 1, 5'h00, 1, 0, 0);
-        rstate  .configure(this, 4, 8,  "RO", 1, 4'h00, 1, 0, 0);
+        rstate  .configure(this, 4, 8,  "RO", 1, 4'h0,  1, 0, 0);
         rf_count.configure(this, 5, 12, "RO", 1, 5'h00, 1, 0, 0);
-        mcr_v   .configure(this, 2, 17, "RO", 1, 2'h00, 1, 0, 0);
-        fcr_v   .configure(this, 5, 19, "RO", 1, 5'h11, 1, 0, 0);
+        mcr_v   .configure(this, 5, 17, "RO", 1, 5'h00, 1, 0, 0);
+        fcr_v   .configure(this, 2, 22, "RO", 1, 2'h3,  1, 0, 0);
     endfunction
 endclass : uart_dbg2_reg
 
@@ -536,7 +534,7 @@ class uart_reg_adapter extends uvm_reg_adapter;
 
     // ===== Escritura del modelo al bus =====
     virtual function uvm_sequence_item reg2bus(const ref uvm_reg_bus_op rw);
-        wb_item_t    item      = wb_item_t::type_id::create("item");
+        wb_item      item      = wb_item::type_id::create("item");
         int unsigned lane      = rw.addr[1 : 0];     // byte donde "vive" el registro dentro de la palabra data
         bit          full_word = (rw.n_bits == 32);  // n_bits: size del registro segun el mapa
 
@@ -566,7 +564,7 @@ class uart_reg_adapter extends uvm_reg_adapter;
 
     // ===== Escritura del bus al modelo =====
     virtual function void bus2reg(uvm_sequence_item bus_item, ref uvm_reg_bus_op rw);
-        wb_item_t    item;
+        wb_item      item;
         int unsigned lane;
 
         // ===== Verificación de seguridad =====
