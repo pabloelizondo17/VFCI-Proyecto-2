@@ -2,8 +2,6 @@
 // Ítem Wishbone
 // -------------------------------------------------------
 // Item de secuencia: wb_item
-//   - Parámetro data_W (32 u 8 bits) 
-//   - Parámetro addr_W (5 o 3 bits)
 // -------------------------------------------------------
 // Objeto de configuración: wb_agent_cfg
 // =======================================================
@@ -18,20 +16,16 @@
 
 typedef enum {WB_BUS, WB_RESET} wb_item_kind;
 
-class wb_item #(int data_W = `WB_DATA_W, int addr_W = `WB_ADDR_W) extends uvm_sequence_item;
-
-    // ===== Define el tipo con parámetros =====
-    typedef wb_item #(data_W, addr_W) this_wb_item;
-
+class wb_item extends uvm_sequence_item;
     // ===== Parámetros propios para los objetos =====
-    rand wb_item_kind                  kind;
-    rand bit                           we;
-    rand              [3 : 0]          sel;
-    rand              [(addr_W-1) : 0] addr;
-    rand              [(data_W-1) : 0] data;
-    rand int unsigned                  delay;
-    rand int unsigned                  rst_cycles;
-    longint unsigned                   stamp; // Borde en que ocurrió
+    rand wb_item_kind          kind;
+    rand bit                   we;
+    rand bit          [3 : 0]  sel;
+    rand bit          [4 : 0]  addr;
+    rand bit          [31 : 0] data;
+    rand int unsigned          delay;
+    rand int unsigned          rst_cycles;
+    longint unsigned           stamp;   // Borde en que ocurrió
 
     // ===== Límites para la aleatorización =====
     int unsigned delay_min      = 0;
@@ -52,7 +46,7 @@ class wb_item #(int data_W = `WB_DATA_W, int addr_W = `WB_ADDR_W) extends uvm_se
     }
 
     // ===== Registro de item en la fábrica =====
-    `uvm_object_param_utils_begin(this_wb_item)
+    `uvm_object_utils_begin(wb_item)
         `uvm_field_enum(wb_item_kind, kind, UVM_ALL_ON)
         `uvm_field_int(we,                  UVM_ALL_ON)
         `uvm_field_int(sel,                 UVM_ALL_ON)

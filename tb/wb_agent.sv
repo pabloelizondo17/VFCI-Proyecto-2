@@ -7,8 +7,8 @@
 // -------------------------------------------------------
 // Objeto de configuración: wb_agent_cfg
 // Item de secuencia: wb_item
-// Secuencia: wb_seq
 // =======================================================
+
 
 `ifndef WB_AGENT_SV
 `define WB_AGENT_SV
@@ -16,16 +16,15 @@
 // =======================================================
 // Secuenciador Wishbone (wb_seqr)
 // -------------------------------------------------------
-//  - Item wb_item definido como wb_item_t
+//  - Item wb_item
 // =======================================================
-uvm_sequencer #(wb_item_t) wb_seqr;
-
+typedef uvm_sequencer #(wb_item) wb_seqr;
 
 
 // =======================================================
 // Driver Wishbone (wb_driver)
 // =======================================================
-class wb_driver extends uvm_driver #(wb_item_t);
+class wb_driver extends uvm_driver #(wb_item);
     `uvm_component_utils(wb_driver)
 
     // ===== Constructor con la fábrica =====
@@ -40,7 +39,7 @@ class wb_driver extends uvm_driver #(wb_item_t);
     function void build_phase(uvm_phase phase);
         super.build_phase(phase);
 
-        if (!uvm_config_db#(wb_agent_cfg)::get(this, "", "cfg", cfg)) begin
+        if (!uvm_config_db#(wb_agent_cfg)::get(this, "", "wb_cfg", cfg)) begin
             `uvm_fatal("NOCFG", "Driver Wishbone sin wb_agent_cfg")
         end
 
@@ -51,8 +50,6 @@ class wb_driver extends uvm_driver #(wb_item_t);
     task run_phase(uvm_phase phase);
         bus_idle();
         apply_reset(5);
-
-        super.build_phase(phase);
 
         forever begin
             seq_item_port.get_next_item(req);
@@ -71,8 +68,8 @@ class wb_driver extends uvm_driver #(wb_item_t);
 
     // ===== Estado en reposo del bus =====
     task bus_idle();
-        wb_vif.stb <= 1'b0;
-        wb_vif.cyc <= 1'b0;
+        wb_vif.wb_driver_cb.stb <= 1'b0;
+        wb_vif.wb_driver_cb.cyc <= 1'b0;
     endtask
 
     // ===== Aplica reset al bus =====
@@ -89,7 +86,7 @@ class wb_driver extends uvm_driver #(wb_item_t);
     endtask
 
     // ===== Proceso principal del driver =====
-    task drive_bus(wb_item_t item);
+    task drive_bus(wb_item item);
         int unsigned guardia = 0;
         @(wb_vif.wb_driver_cb);
 
@@ -126,9 +123,9 @@ class wb_monitor extends uvm_monitor;
         super.new(name, parent); 
     endfunction
  
-    virtual wb_if                  wb_vif;
-    uvm_analysis_port #(wb_item_t) wb_mon_ap
-    wb_agent_cfg                   cfg;
+    virtual wb_if                wb_vif;
+    uvm_analysis_port #(wb_item) wb_mon_ap;
+    wb_agent_cfg                 cfg;
 
     // ===== Fase "build" de UVM =====
     function void build_phase(uvm_phase phase);
@@ -136,7 +133,7 @@ class wb_monitor extends uvm_monitor;
 
         wb_mon_ap = new("wb_mon_ap", this);
 
-        if (!uvm_config_db#(wb_agent_cfg)::get(this, "", "cfg", cfg)) begin
+        if (!uvm_config_db#(wb_agent_cfg)::get(this, "", "wb_cfg", cfg)) begin
             `uvm_fatal("NOCFG", "Monitor Wishbone sin wb_agent_cfg")
         end
 
@@ -157,19 +154,21 @@ class wb_monitor extends uvm_monitor;
                 item.kind  = WB_RESET;
                 item.data  = wb_vif.wb_monitor_cb.rst;
                 item.stamp = wb_vif.wb_monitor_cb.clk_counter;
+
                 prev_rst   = wb_vif.wb_monitor_cb.rst;
 
                 wb_mon_ap.write(item);
             end
 
             // ===== Se registra una transferencia =====
-            if(wb_vif.wb_monitor_cb.cyc &&
-               wb_vif.wb_monitor_cb.stb &&
-               wb_vif.wb_monitor_cb.ack) begin
+            if (wb_vif.wb_monitor_cb.cyc &&
+                wb_vif.wb_monitor_cb.stb &&
+                wb_vif.wb_monitor_cb.ack) begin
                 wb_item item = wb_item::type_id::create("trans_item");
 
                 item.kind  = WB_BUS;
                 item.we    = wb_vif.wb_monitor_cb.we;
+                item.sel   = wb_vif.wb_monitor_cb.sel;
                 item.data  = wb_vif.wb_monitor_cb.we ? 
                              wb_vif.wb_monitor_cb.data_m2dut : 
                              wb_vif.wb_monitor_cb.data_dut2m;
@@ -195,17 +194,17 @@ class wb_agent extends uvm_agent;
         super.new(name, parent); 
     endfunction
 
-    wb_driver                      wb_driver_0;
-    wb_monitor                     wb_monitor_0;
-    wb_seqr                        wb_seqr_0;
-    uvm_analysis_port #(wb_item_t) wb_agent_ap;
-    wb_agent_cfg                   cfg;
+    wb_driver                    wb_driver_0;
+    wb_monitor                   wb_monitor_0;
+    wb_seqr                      wb_seqr_0;
+    uvm_analysis_port #(wb_item) wb_agent_ap;
+    wb_agent_cfg                 cfg;
 
     // ===== Fase "build" de UVM =====
     function void build_phase(uvm_phase phase);
         super.build_phase(phase);
 
-        if (!uvm_config_db#(wb_agent_cfg)::get(this, "", "cfg", cfg)) begin
+        if (!uvm_config_db#(wb_agent_cfg)::get(this, "", "wb_cfg", cfg)) begin
             `uvm_fatal("NOCFG", "Agente Wishbone sin wb_agent_cfg.")
         end
 
@@ -214,7 +213,7 @@ class wb_agent extends uvm_agent;
 
         if(cfg.is_active == UVM_ACTIVE) begin
             wb_driver_0  = wb_driver::type_id::create("wb_driver_0", this);
-            wb_seqr_0    = uvm_sequencer #(wb_item_t)::type_id::create("wb_seqr_0", this);
+            wb_seqr_0    = uvm_sequencer #(wb_item)::type_id::create("wb_seqr_0", this);
         end
     endfunction
 

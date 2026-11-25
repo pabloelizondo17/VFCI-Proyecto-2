@@ -2,8 +2,6 @@
 // Interfaz Wishbone
 // -------------------------------------------------------
 // Item de secuencia: wb_item
-//   - Parámetro data_W (32 u 8 bits) 
-//   - Parámetro addr_W (5 o 3 bits)
 // =======================================================
 
 
@@ -14,7 +12,7 @@
 `ifndef WB_IF_SV
 `define WB_IF_SV
 
-interface wb_if #(int data_W = `WB_DATA_W, int addr_W = `WB_ADDR_W)(input logic clk);
+interface wb_if (input logic clk);
     logic                  rst = 1'b0;
     logic                  we  = 1'b0;
     logic                  stb = 1'b0;
@@ -22,11 +20,12 @@ interface wb_if #(int data_W = `WB_DATA_W, int addr_W = `WB_ADDR_W)(input logic 
     logic                  ack;
     logic [3 : 0]          sel = 4'b0;
 
-    logic [(addr_W-1) : 0] addr       = '0;  // ambiente -> DUT
-    logic [(data_W-1) : 0] data_m2dut = '0;  // ambiente -> DUT
-    logic [(data_W-1) : 0] data_dut2m;       // DUT -> ambiente
+    logic [4 : 0]  addr       = '0;  // ambiente -> DUT
+    logic [31 : 0] data_m2dut = '0;  // ambiente -> DUT
+    logic [31 : 0] data_dut2m;       // DUT -> ambiente
 
-    longint unsigned clk_counter       = 0;
+    longint unsigned clk_counter = 0;
+
     always @(posedge clk) clk_counter <= clk_counter + 1;
 
 
@@ -58,7 +57,7 @@ interface wb_if #(int data_W = `WB_DATA_W, int addr_W = `WB_ADDR_W)(input logic 
 
     // ===== Modport para el DUT =====
     modport wb_dut_mp(
-        input clk, rst, we, stb, cyc, sel, addr, data_m2dut
+        input clk, rst, we, stb, cyc, sel, addr, data_m2dut,
         output ack, data_dut2m
     );
 
