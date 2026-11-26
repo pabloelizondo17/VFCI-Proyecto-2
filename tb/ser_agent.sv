@@ -1,17 +1,33 @@
-`ifndef SERIAL_AGENT_SV
-`define SERIAL_AGENT_SV
+// =======================================================
+//  Agente Serial (serial_agent)
+// -------------------------------------------------------
+//      - serial_driver
+//      - serial_monitor
+//      - serial_seqr
+//      - serial_agent
+// -------------------------------------------------------
+// Objeto de configuración: serial_agent_cfg
+// Item de secuencia: serial_seq_item
+// =======================================================
 
-//------------------------------------------------------------------------------------------
-//Archivo para agente del bus serial
-//------------------------------------------------------------------------------------------
 
-//Secuenciador del agente serial
+`ifndef SER_AGENT_SV
+`define SER_AGENT_SV
+
+// =======================================================
+// Secuenciador Serial (serial_seqr)
+// -------------------------------------------------------
+//  - Item serial_seq_item
+// =======================================================
 typedef uvm_sequencer #(serial_seq_item) serial_seqr;
 
-//Driver del bus serial
-class serial_driver extends uvm_driver #(serial_seq_item);
 
+// =======================================================
+// Driver Serial (serial_driver)
+// =======================================================
+class serial_driver extends uvm_driver #(serial_seq_item);
   `uvm_component_utils(serial_driver)
+
   serial_agent_cfg serial_cfg; //Referencia a la configuración del agente
   virtual serial_if serial_vif; //Referencia  a la interfaz del bu serial
   uvm_analysis_port #(serial_seq_item) serial_drv_ap; //Para mandar lo que se manejó
@@ -34,7 +50,7 @@ class serial_driver extends uvm_driver #(serial_seq_item);
   //Build phase del driver
   virtual function void build_phase(uvm_phase phase);
     super.build_phase(phase);
-    if (!uvm_config_db#(serial_agent_cfg)::get(this, "", "cfg", serial_cfg)) begin
+    if (!uvm_config_db#(serial_agent_cfg)::get(this, "", "serial_cfg", serial_cfg)) begin
       `uvm_fatal("NO CFG", "Driver sin serial_cfg")
     end
     serial_vif = serial_cfg.vif; //Se obtiene la referencia a la interfaz del bus serial
@@ -141,7 +157,7 @@ class serial_driver extends uvm_driver #(serial_seq_item);
     serial_drv_ap.write(item);
   endtask
 
-//Run phase del driver
+  //Run phase del driver
   task run_phase(uvm_phase phase);
 
     //Reposo desde el arranque
@@ -182,10 +198,12 @@ class serial_driver extends uvm_driver #(serial_seq_item);
       seq_item_port.item_done();        
     end
   endtask
-endclass: serial_driver 
+endclass : serial_driver 
 
 
-//Monitor del bus serial
+// =======================================================
+// Monitor Serial (serial_monitor)
+// =======================================================
 class serial_monitor extends uvm_monitor;
   `uvm_component_utils(serial_monitor)
 
@@ -198,13 +216,13 @@ class serial_monitor extends uvm_monitor;
   virtual serial_if serial_vif; //Referencia  a la interfaz del bus serial
 
   uvm_analysis_port #(serial_seq_item) serial_mon_ap;
-  serial_dir_e linea = SERIAL_RX;
+  ser_dir_e linea = SERIAL_RX;
 
   //Build phase del monitor
   virtual function void build_phase(uvm_phase phase);
    super.build_phase(phase);
    serial_mon_ap = new("serial_mon_ap", this);
-   if (!uvm_config_db#(serial_agent_cfg)::get(this, "", "cfg", serial_cfg)) begin
+   if (!uvm_config_db#(serial_agent_cfg)::get(this, "", "serial_cfg", serial_cfg)) begin
       `uvm_fatal("NO CFG", "Monitor sin serial_cfg")
    end
    serial_vif = serial_cfg.vif; //Se obtiene la referencia a la interfaz del bus serial
@@ -340,9 +358,12 @@ class serial_monitor extends uvm_monitor;
       lin = 1'b1;
     end
   endtask
-endclass: serial_monitor
+endclass : serial_monitor
 
-//Agente del bus serial
+
+// =======================================================
+// Agente Serial (serial_agent)
+// =======================================================
 class serial_agent extends uvm_agent;
   `uvm_component_utils(serial_agent)
 
@@ -368,7 +389,7 @@ class serial_agent extends uvm_agent;
   //Build phase
   virtual function void build_phase(uvm_phase phase);
     super.build_phase(phase);
-    if (!uvm_config_db#(serial_agent_cfg)::get(this, "", "cfg", serial_cfg)) begin
+    if (!uvm_config_db#(serial_agent_cfg)::get(this, "", "serial_cfg", serial_cfg)) begin
       `uvm_fatal("NO CFG", "Agente sin serial_cfg")
     end
 
@@ -404,7 +425,6 @@ class serial_agent extends uvm_agent;
       serial_drvr.serial_drv_ap.connect(serial_drv_ap);
     end
  endfunction 
-
 endclass: serial_agent
 
-`endif //serial_AGENT_SV
+`endif //SER_AGENT_SV

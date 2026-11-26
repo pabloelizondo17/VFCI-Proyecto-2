@@ -16,7 +16,7 @@
 `ifndef SER_SEQ_ITEM_SV
 `define SER_SEQ_ITEM_SV
 
-typedef enum {SER_TX, SER_RX} ser_dir_e;                        // Direccion de los datos
+typedef enum {SERIAL_TX, SERIAL_RX} ser_dir_e;                  // Direccion de los datos
 typedef enum {GLITCH_NONE, GLITCH_START, GLITCH_DATA} glitch_e; // Tipo de glith
 
 class serial_seq_item extends uvm_sequence_item;
