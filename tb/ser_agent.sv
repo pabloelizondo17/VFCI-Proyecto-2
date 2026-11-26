@@ -133,6 +133,14 @@ class serial_driver extends uvm_driver #(serial_seq_item);
 
   endtask
 
+  //Publica el caracter un ciclo antes de que el DUT muestree la mitad del bit de parada
+  task publicar(serial_seq_item item);
+    int unsigned medios_bits = 2 * (1 + data_bits + pe) + 1; //inicio + datos + paridad + medio bit de parada
+
+    #((medios_bits * 8.0 * dl_ef - 1.0) * t_clk); //tiempo nominal, sin la desviacion
+    serial_drv_ap.write(item);
+  endtask
+
 //Run phase del driver
   task run_phase(uvm_phase phase);
 
@@ -151,10 +159,13 @@ class serial_driver extends uvm_driver #(serial_seq_item);
       cargar_formato(req);                //Copia el formato y calcula t_bit
 
       fork
-        //Hilo 1: manda el carácter
+        //Hilo 1: manda el carácter y publica para el modelo de referencia
         begin
-          gap_y_glitch(req);              //Gap (con o sin glitch de inicio)
-          trama(req);                     //Inicio, datos, paridad y parada (o break)
+          gap_y_glitch(req);//Gap (con o sin glitch de inicio)
+          fork
+            trama(req);//Inicio, datos, paridad y parada (o break)
+            publicar(req);//Avisa al scoreboard antes de que el DUT muestree
+          join 
         end
         //Hilo 2: reset a mitad del carácter
         begin
@@ -168,14 +179,8 @@ class serial_driver extends uvm_driver #(serial_seq_item);
         serial_vif.srx_pad_i <= 1'b1;
         wait (serial_vif.rst === 1'b0);
       end
-      else begin
-        //Carácter completo: se publica para la cobertura
-        serial_drv_ap.write(req);
-      end
-
       seq_item_port.item_done();        
     end
-
   endtask
 endclass: serial_driver 
 
