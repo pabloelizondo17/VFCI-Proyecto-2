@@ -2,9 +2,12 @@
 //  Conjunto de clases de configuración
 // -------------------------------------------------------
 //  Clases de configuración:
-//      - uart_env_cfg
+//      - wb_agent_cfg
+//      - mod_agent_cfg
+//      - serial_agent_cfg
+//      - uart_stim_cfg
 //      - uart_dut_cfg
-//      -
+//      - uart_env_cfg
 // =======================================================
 
 `ifndef UART_CFG_SV
@@ -123,6 +126,135 @@ class serial_agent_cfg extends uvm_object;
 endclass: serial_agent_cfg
 
 
+
+// =======================================================
+//  Clase de configuración para los estímulos
+// -------------------------------------------------------
+//  Lugar de lectura de plusargs:
+//   - uart_env_cfg  
+// =======================================================
+class uart_stim_cfg extends uvm_object;
+    `uvm_object_utils(uart_stim_cfg)
+
+    // ===== Knobs para estímulos por Wishbone =====
+    int unsigned wb_n_stim_min        = 30;
+    int unsigned wb_n_stim_max        = 150;
+    int unsigned wb_status_gap_min    = 5;
+    int unsigned wb_status_gap_max    = 15;
+    int unsigned wb_polling_min       = 10;
+    int unsigned wb_polling_max       = 25;
+    int unsigned sw_service_delay_max = 15;
+    int unsigned sw_service_delay_min = 0;
+
+    // ===== Parámetros para estímulos por Wishbone =====
+    rand int unsigned wb_n_stim;
+    rand bit          wb_polling_status;
+
+
+    // ===== Knobs para estímulos por Serial =====
+    int unsigned ser_parity_err_pct_min = 5; // Porcentaje de caracteres con error de paridad
+    int unsigned ser_parity_err_pct_max = 5;
+    int unsigned ser_frame_err_pct_min  = 5; // Porcentaje de caracteres con el bit de frame en 0
+    int unsigned ser_frame_err_pct_max  = 5;
+    int unsigned ser_break_pct_min      = 2; // Porcentaje de caracteres que son un break
+    int unsigned ser_break_pct_max      = 2;
+    int unsigned ser_glitch_pct_min     = 2; // Porcentaje de caracteres que llevan un pulso corto
+    int unsigned ser_glitch_pct_max     = 2;
+
+    int unsigned ser_baud_out_pct_min = 10; // Porcentaje de caracteres fuera de tolerancia (por época)
+    int unsigned ser_baud_out_pct_max = 10;
+    int          ser_baud_dev_min     = 0;  // Magnitud dentro de tolerancia (por carácter)
+    int          ser_baud_dev_max     = 2;
+    int unsigned ser_baud_out_dev_min = 4;  // Magnitud fuera de tolerancia (por carácter)
+    int unsigned ser_baud_out_dev_max = 10;
+ 
+    int unsigned ser_gap_min       = 0;   // Separación entre caracteres RX
+    int unsigned ser_gap_max       = 20;
+    int unsigned ser_break_len_min = 1;   // Bits extra en 0 después de una trama completa
+    int unsigned ser_break_len_max = 20;
+
+    int unsigned ser_n_items_min = 30;  
+    int unsigned ser_n_items_max = 150; 
+
+    // ===== Parámetros para estímulos por Serial =====
+    rand int unsigned ser_n_items;
+    rand int unsigned ser_parity_err_pct;
+    rand int unsigned ser_frame_err_pct;
+    rand int unsigned ser_break_pct;
+    rand int unsigned ser_glitch_pct;
+    rand int unsigned ser_baud_out_pct;
+
+
+    // ===== Knobs para estímulos por Módem =====
+    int unsigned modem_toggle_pct_min   = 0;
+    int unsigned modem_toggle_pct_max   = 10;
+    int unsigned modem_toggle_delay_min = 0;
+    int unsigned modem_toggle_delay_max = 1000;
+    int unsigned modem_n_items_min      = 30;
+    int unsigned modem_n_items_max      = 150;
+
+    // ===== Parámetros para estímulos por Módem =====
+    rand int unsigned modem_n_items;
+    rand int unsigned modem_toggle_pct;
+
+
+    // ===== Restricciones para estímulos por Wishbone =====
+    constraint c_n_stim {
+        wb_n_stim inside {[wb_n_stim_min : wb_n_stim_max]};
+    }
+    constraint c_polling_status {
+        wb_polling_status dist {0 := 80, 1 := 20};
+    }
+
+
+    // ===== Restricciones para estímulos por Serial =====
+    constraint c_ser_n_items{
+        ser_n_items inside {[ser_n_items_min : ser_n_items_max]};
+    }
+    constraint c_ser_parity_err_pct{
+        ser_parity_err_pct inside {[ser_parity_err_pct_min : ser_parity_err_pct_max]};
+
+        ser_parity_err_pct <= 100;
+    }
+    constraint c_ser_frame_err_pct{
+        ser_frame_err_pct inside {[ser_frame_err_pct_min : ser_frame_err_pct_max]};
+
+        ser_frame_err_pct <= 100;
+    }
+    constraint c_ser_break_pct{
+        ser_break_pct inside {[ser_break_pct_min : ser_break_pct_max]};
+
+        ser_break_pct <= 100;
+    }
+    constraint c_ser_glitch_pct{
+        ser_glitch_pct inside {[ser_glitch_pct_min : ser_glitch_pct_max]};
+
+        ser_glitch_pct <= 100;
+    }
+    constraint c_ser_baud_out_pct{
+        ser_baud_out_pct inside {[ser_baud_out_pct_min : ser_baud_out_pct_max]};
+
+        ser_baud_out_pct <= 100;
+    }
+
+
+    // ===== Restricciones para estímulos por Modem =====
+    constraint c_modem_n_items{
+        modem_n_items inside {[modem_n_items_min : modem_n_items_max]};
+    }
+    constraint c_modem_toggle_pct{
+        modem_toggle_pct inside {[modem_toggle_pct_min : modem_toggle_pct_max]};
+    }
+
+
+    // ===== Constructor con la fábrica =====
+    function new(string name = "uart_stim_cfg");
+        super.new(name); 
+    endfunction
+endclass : uart_stim_cfg
+
+
+
 // =======================================================
 //  Clase de configuración para el DUT
 // -------------------------------------------------------
@@ -135,7 +267,7 @@ class uart_dut_cfg extends uvm_object;
     uart_stim_cfg stim;
 
     // ===== Knobs modificados por plusargs =====
-    int unsigned dl_min = 2, dl_max = 16'hFFFF;
+    int unsigned dl_min = 1, dl_max = 16'hFFFF;
 
     int unsigned fcr_tl_weights[];         // [00=1,01=4,10=8,11=14] bytes
     int unsigned lcr_bits_char_weights[];  // [00=5,01=6,10=7,11=8] bits
@@ -272,135 +404,6 @@ class uart_dut_cfg extends uvm_object;
 endclass : uart_dut_cfg
 
 
-// =======================================================
-//  Clase de configuración para los estímulos
-// -------------------------------------------------------
-//  Lugar de lectura de plusargs:
-//   - uart_env_cfg  
-// =======================================================
-class uart_stim_cfg extends uvm_object;
-    `uvm_object_utils(uart_stim_cfg)
-
-    // ===== Knobs para estímulos por Wishbone =====
-    int unsigned wb_n_stim_min        = 30;
-    int unsigned wb_n_stim_max        = 150;
-    int unsigned wb_status_gap_min    = 5;
-    int unsigned wb_status_gap_max    = 15;
-    int unsigned wb_polling_min       = 10;
-    int unsigned wb_polling_max       = 25;
-    int unsigned sw_service_delay_max = 15;
-    int unsigned sw_service_delay_min = 0;
-    int unsigned wb_polling_weights [];   // [intr,polling]
-
-    // ===== Parámetros para estímulos por Wishbone =====
-    rand int unsigned wb_n_stim;
-    rand bit          wb_polling_status;
-
-
-    // ===== Knobs para estímulos por Serial =====
-    int unsigned ser_parity_err_pct_min = 5; // Porcentaje de caracteres con error de paridad
-    int unsigned ser_parity_err_pct_max = 5;
-    int unsigned ser_frame_err_pct_min  = 5; // Porcentaje de caracteres con el bit de frame en 0
-    int unsigned ser_frame_err_pct_max  = 5;
-    int unsigned ser_break_pct_min      = 2; // Porcentaje de caracteres que son un break
-    int unsigned ser_break_pct_max      = 2;
-    int unsigned ser_glitch_pct_min     = 2; // Porcentaje de caracteres que llevan un pulso corto
-    int unsigned ser_glitch_pct_max     = 2;
-
-    int unsigned ser_baud_out_pct_min = 10; // Porcentaje de caracteres fuera de tolerancia (por época)
-    int unsigned ser_baud_out_pct_max = 10;
-    int          ser_baud_dev_min     = 0;  // Magnitud dentro de tolerancia (por carácter)
-    int          ser_baud_dev_max     = 2;
-    int unsigned ser_baud_out_dev_min = 4;  // Magnitud fuera de tolerancia (por carácter)
-    int unsigned ser_baud_out_dev_max = 10;
- 
-    int unsigned ser_gap_min       = 0;   // Separación entre caracteres RX
-    int unsigned ser_gap_max       = 20;
-    int unsigned ser_break_len_min = 1;   // Bits extra en 0 después de una trama completa
-    int unsigned ser_break_len_max = 20;
-
-    int unsigned ser_n_items_min = 30;  
-    int unsigned ser_n_items_max = 150; 
-
-    // ===== Parámetros para estímulos por Serial =====
-    rand int unsigned ser_n_items;
-    rand int unsigned ser_parity_err_pct;
-    rand int unsigned ser_frame_err_pct;
-    rand int unsigned ser_break_pct;
-    rand int unsigned ser_glitch_pct;
-    rand int unsigned ser_baud_out_pct;
-
-
-    // ===== Knobs para estímulos por Módem =====
-    int unsigned modem_toggle_pct_min   = 0;
-    int unsigned modem_toggle_pct_max   = 10;
-    int unsigned modem_toggle_delay_min = 0;
-    int unsigned modem_toggle_delay_max = 1000;
-    int unsigned modem_n_items_min      = 30;
-    int unsigned modem_n_items_max      = 80;
-
-    // ===== Parámetros para estímulos por Módem =====
-    rand int unsigned modem_n_items;
-    rand int unsigned modem_toggle_pct;
-
-
-    // ===== Restricciones para estímulos por Wishbone =====
-    constraint c_n_stim {
-        wb_n_stim inside {[wb_n_stim_min : wb_n_stim_max]};
-    }
-    constraint c_polling_status {
-        wb_polling_status dist {0 := wb_polling_weights[0],
-                                1 := wb_polling_weights[1]};
-    }
-
-    // ===== Restricciones para estímulos por Serial =====
-    constraint c_ser_n_items{
-        ser_n_items inside {[ser_n_items_min : ser_n_items_max]};
-    }
-    constraint c_ser_parity_err_pct{
-        ser_parity_err_pct inside {[ser_parity_err_pct_min : ser_parity_err_pct_max]};
-
-        ser_parity_err_pct <= 100;
-    }
-    constraint c_ser_frame_err_pct{
-        ser_frame_err_pct inside {[ser_frame_err_pct_min : ser_frame_err_pct_max]};
-
-        ser_frame_err_pct <= 100;
-    }
-    constraint c_ser_break_pct{
-        ser_break_pct inside {[ser_break_pct_min : ser_break_pct_max]};
-
-        ser_break_pct <= 100;
-    }
-    constraint c_ser_glitch_pct{
-        ser_glitch_pct inside {[ser_glitch_pct_min : ser_glitch_pct_max]};
-
-        ser_glitch_pct <= 100;
-    }
-    constraint c_ser_baud_out_pct{
-        ser_baud_out_pct inside {[ser_baud_out_pct_min : ser_baud_out_pct_max]};
-
-        ser_baud_out_pct <= 100;
-    }
-
-
-    // ===== Restricciones para estímulos por Modem =====
-    constraint c_modem_n_items{
-        modem_n_items inside {[modem_n_items_min : modem_n_items_max]};
-    }
-    constraint c_modem_toggle_pct{
-        modem_toggle_pct inside {[modem_toggle_pct_min : modem_toggle_pct_max]};
-    }
-
-
-    // ===== Constructor con la fábrica =====
-    function new(string name = "uart_stim_cfg");
-        super.new(name); 
-
-        wb_polling_weights = '{90, 10};
-    endfunction
-endclass : uart_stim_cfg
-
 
 // =======================================================
 //  Clase de configuración para el ambiente
@@ -413,7 +416,6 @@ endclass : uart_stim_cfg
 //      - uart_scoreboard_cfg
 //      - uart_dut_cfg
 //      - 
-//      - 
 // =======================================================
 class uart_env_cfg extends uvm_object;
     `uvm_object_utils(uart_env_cfg)
@@ -422,19 +424,17 @@ class uart_env_cfg extends uvm_object;
     mod_agent_cfg       mod_cfg;
     serial_agent_cfg    serial_cfg;
     uart_stim_cfg       stim_cfg;
-    uart_scoreboard_cfg scoreboard_cfg;
     uart_dut_cfg        dut_cfg;
 
     // ===== Constructor con la fábrica =====
     function new(string name = "uart_env_cfg");
         super.new(name);
 
-        wb_cfg         = wb_agent_cfg::type_id::create("wb_cfg");
-        mod_cfg        = mod_agent_cfg::type_id::create("mod_cfg");
-        serial_cfg     = serial_agent_cfg::type_id::create("serial_cfg");
-        stim_cfg       = uart_stim_cfg::type_id::create("stim_cfg");
-        scoreboard_cfg = uart_scoreboard_cfg::type_id::create("scoreboard_cfg");
-        dut_cfg        = uart_dut_cfg::type_id::create("dut_cfg");
+        wb_cfg     = wb_agent_cfg::type_id::create("wb_cfg");
+        mod_cfg    = mod_agent_cfg::type_id::create("mod_cfg");
+        serial_cfg = serial_agent_cfg::type_id::create("serial_cfg");
+        stim_cfg   = uart_stim_cfg::type_id::create("stim_cfg");
+        dut_cfg    = uart_dut_cfg::type_id::create("dut_cfg");
 
         dut_cfg.stim = stim_cfg;
    endfunction
@@ -544,7 +544,6 @@ class uart_env_cfg extends uvm_object;
         knob_range("UART_STIM_WB_STATUS_GAP", stim_cfg.wb_status_gap_min,    stim_cfg.wb_status_gap_max);
         knob_range("UART_STIM_WB_POLLING",    stim_cfg.wb_polling_min,       stim_cfg.wb_polling_max);
         knob_range("UART_STIM_SW_SVC_DELAY",  stim_cfg.sw_service_delay_min, stim_cfg.sw_service_delay_max);
-        knob_list ("UART_STIM_WB_POLLING_W",  stim_cfg.wb_polling_weights);
 
         // ----- Estímulos Seriales -----
         knob_range("UART_STIM_SER_PARITY_ERR_PCT", stim_cfg.ser_parity_err_pct_min, stim_cfg.ser_parity_err_pct_max);
@@ -563,8 +562,6 @@ class uart_env_cfg extends uvm_object;
         knob_range("UART_STIM_MODEM_TOGGLE_PCT",   stim_cfg.modem_toggle_pct_min,   stim_cfg.modem_toggle_pct_max);
         knob_range("UART_STIM_MODEM_TOGGLE_DELAY", stim_cfg.modem_toggle_delay_min, stim_cfg.modem_toggle_delay_max);
         knob_range("UART_STIM_MODEM_N_ITEMS",      stim_cfg.modem_n_items_min,      stim_cfg.modem_n_items_max);
-
-        // ----- Scoreboard -----
 
         // ----- Cobertura -----
     endfunction

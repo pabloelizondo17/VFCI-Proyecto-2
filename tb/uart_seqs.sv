@@ -62,7 +62,7 @@ class uart_base_vseq extends uvm_sequence;
 
     // ===== Espera n ciclos de reloj =====
     task wait_cycles(int unsigned n);
-        repeat (n) @(clk_vif.serial_monitor_cb);
+      repeat (n) @(clk_vif.serial_monitor_cb);
     endtask
 
     // ===== Ciclos que dura un carácter en la línea =====
@@ -106,7 +106,7 @@ class uart_base_vseq extends uvm_sequence;
 
     // ===== Proceso de reset del DUT =====
     task reset_DUT();
-        wb_item_t wb_rst_item = wb_item_t::type_id::create("wb_rst_item");
+        wb_item wb_rst_item = wb_item::type_id::create("wb_rst_item");
         
         start_item(wb_rst_item, -1, p_sequencer.wb_seqr_0);
             if (!wb_rst_item.randomize() with {kind  == WB_RESET; delay == 0;}) begin
@@ -191,7 +191,7 @@ class uart_base_vseq extends uvm_sequence;
         longint unsigned waited = 0;
         longint unsigned lim    = 6 * byte_cycles()
                                 + stim_cfg.sw_service_delay_max
-                                + stim_cfg.polling_max + 1000;
+                                + stim_cfg.wb_polling_max + 1000;
         int unsigned     gap;
 
         wait_cycles(4); // último carácter: de la línea a la FIFO
@@ -302,7 +302,7 @@ endclass : uart_serial_traffic_vseq
 // =======================================================
 //  Secuencia para señales modem
 // =======================================================
-class uart_modem_traffic_vseq extends uart_base_vseq #(mod_seq_item);
+class uart_modem_traffic_vseq extends uart_base_vseq;
     `uvm_object_utils(uart_modem_traffic_vseq)
 
     // ===== Incializa valor del estado de cada línea ===== 
@@ -467,7 +467,7 @@ class uart_int_attend_vseq extends uart_base_vseq;
                 end while(!iir_value[0] && n < max_iter);
 
                 if (n >= max_iter) begin
-                    `uvm_error("IIR", "Una interrupción no se limpió tras %0d lecturas de IIR.", max_iter)
+                    `uvm_error("IIR", $sformatf("Una interrupcion no se limpio tras %0d lecturas de IIR.", max_iter))
                 end
             end
         end
