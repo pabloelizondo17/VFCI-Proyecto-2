@@ -135,7 +135,7 @@ class uart_dut_cfg extends uvm_object;
     uart_stim_cfg stim;
 
     // ===== Knobs modificados por plusargs =====
-    int unsigned dl_min = 1, dl_max = 16'hFFFF;
+    int unsigned dl_min = 2, dl_max = 16'hFFFF;
 
     int unsigned fcr_tl_weights[];         // [00=1,01=4,10=8,11=14] bytes
     int unsigned lcr_bits_char_weights[];  // [00=5,01=6,10=7,11=8] bits
@@ -290,6 +290,7 @@ class uart_stim_cfg extends uvm_object;
     int unsigned wb_polling_max       = 25;
     int unsigned sw_service_delay_max = 15;
     int unsigned sw_service_delay_min = 0;
+    int unsigned wb_polling_weights [];   // [intr,polling]
 
     // ===== Parámetros para estímulos por Wishbone =====
     rand int unsigned wb_n_stim;
@@ -336,7 +337,7 @@ class uart_stim_cfg extends uvm_object;
     int unsigned modem_toggle_delay_min = 0;
     int unsigned modem_toggle_delay_max = 1000;
     int unsigned modem_n_items_min      = 30;
-    int unsigned modem_n_items_max      = 150;
+    int unsigned modem_n_items_max      = 80;
 
     // ===== Parámetros para estímulos por Módem =====
     rand int unsigned modem_n_items;
@@ -348,9 +349,9 @@ class uart_stim_cfg extends uvm_object;
         wb_n_stim inside {[wb_n_stim_min : wb_n_stim_max]};
     }
     constraint c_polling_status {
-        wb_polling_status dist {0 := 80, 1 := 20};
+        wb_polling_status dist {0 := wb_polling_weights[0],
+                                1 := wb_polling_weights[1]};
     }
-
 
     // ===== Restricciones para estímulos por Serial =====
     constraint c_ser_n_items{
@@ -395,6 +396,8 @@ class uart_stim_cfg extends uvm_object;
     // ===== Constructor con la fábrica =====
     function new(string name = "uart_stim_cfg");
         super.new(name); 
+
+        wb_polling_weights = '{90, 10};
     endfunction
 endclass : uart_stim_cfg
 
@@ -541,6 +544,7 @@ class uart_env_cfg extends uvm_object;
         knob_range("UART_STIM_WB_STATUS_GAP", stim_cfg.wb_status_gap_min,    stim_cfg.wb_status_gap_max);
         knob_range("UART_STIM_WB_POLLING",    stim_cfg.wb_polling_min,       stim_cfg.wb_polling_max);
         knob_range("UART_STIM_SW_SVC_DELAY",  stim_cfg.sw_service_delay_min, stim_cfg.sw_service_delay_max);
+        knob_list ("UART_STIM_WB_POLLING_W",  stim_cfg.wb_polling_weights);
 
         // ----- Estímulos Seriales -----
         knob_range("UART_STIM_SER_PARITY_ERR_PCT", stim_cfg.ser_parity_err_pct_min, stim_cfg.ser_parity_err_pct_max);

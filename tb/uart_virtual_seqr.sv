@@ -22,9 +22,8 @@ class uart_virtual_seqr extends uvm_sequencer #(uvm_sequence_item);
     serial_seqr serial_seqr_0;
 
     // ===== RAL y configuración =====
-    uart_reg_block        reg_model;
-    uart_virtual_seqr_cfg vseqr_cfg;
-    uart_env_cfg          env_cfg;
+    uart_reg_block reg_model;
+    uart_env_cfg   env_cfg;
 
     // ===== Puertos de análisis para interrupciones =====
     uvm_tlm_analysis_fifo #(mod_intr_item) intr_fifo;
@@ -32,6 +31,17 @@ class uart_virtual_seqr extends uvm_sequencer #(uvm_sequence_item);
     // ===== Constructor con la fábrica =====
     function new(string name = "uart_virtual_seqr", uvm_component parent = null); 
         super.new(name, parent); 
+    endfunction
+
+    // ===== Fase "build" de UVM =====
+    function void build_phase(uvm_phase phase);
+        super.build_phase(phase);
+
+        if (!uvm_config_db#(uart_env_cfg)::get(this, "", "env_cfg", env_cfg)) begin
+            `uvm_fatal("NOCFG", "Secuenciador virtual sin objeto de configuración (env_cfg).")
+        end
+
+        intr_fifo = new("intr_fifo", this);
     endfunction
 endclass : uart_virtual_seqr
 
