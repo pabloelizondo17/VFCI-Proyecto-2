@@ -19,7 +19,7 @@ class uart_scoreboard extends uvm_scoreboard;
   uvm_analysis_imp_mod #(mod_seq_item, uart_scoreboard) mod_imp; 
 
   //Configuración
-  uart_scoreboard_cfg cfg;
+  uart_env_cfg env_cfg;
   virtual wb_if vif;
 
   //Tipos
@@ -73,9 +73,9 @@ class uart_scoreboard extends uvm_scoreboard;
   //Build phase
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
-    if (!uvm_config_db#(uart_scoreboard_cfg)::get(this, "", "cfg", cfg))
+    if (!uvm_config_db#(uart_scoreboard_cfg)::get(this, "", "env_cfg", env_cfg))
       `uvm_fatal("NOCFG", "Scoreboard no encontró su cfg")
-    vif = cfg.vif;
+    vif = env_cfg.wb_cfg.wb_vif;
     if (vif == null)
       `uvm_fatal("NOVIF", "la cfg del scoreboard no tiene vif")
     reset_model();
@@ -207,7 +207,7 @@ class uart_scoreboard extends uvm_scoreboard;
       entrada.fe = item.frame_err; 
       entrada.bi = 0;
     end
-    entrada.compare = (dev <= cfg.baud_tol); //No compara el dato si esta fuera de tolerancia
+    entrada.compare = (dev <= env_cfg.serial_cfg.baud_tol); //No compara el dato si esta fuera de tolerancia
     entrada.recibido = 0; //Cuando el driver recien lo publica, puede estar o no en el DUT 
     entrada.lb = 0;
     entrada.t_pub = vif.clk_counter;
