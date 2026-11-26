@@ -1,17 +1,33 @@
+// =======================================================
+//  Agente Módem (mod_agent)
+// -------------------------------------------------------
+//      - mod_driver
+//      - mod_monitor
+//      - intr_monitor
+//      - mod_agent
+// -------------------------------------------------------
+// Objeto de configuración: mod_agent_cfg
+// Item de secuencia: mod_seq_item
+// =======================================================
+
+
 `ifndef MOD_AGENT_SV
 `define MOD_AGENT_SV
 
-//------------------------------------------------------------------------------------------
-//Archivo para agente de modem
-//------------------------------------------------------------------------------------------
-
-//Secuenciador del Modem
+// =======================================================
+// Secuenciador Módem (mod_seqr)
+// -------------------------------------------------------
+//  - Item mod_seq_item
+// =======================================================
 typedef uvm_sequencer #(mod_seq_item) mod_seqr;
 
-//Driver del modem
-class mod_driver extends uvm_driver #(mod_seq_item);
 
+// =======================================================
+// Driver Módem (mod_driver)
+// =======================================================
+class mod_driver extends uvm_driver #(mod_seq_item);
   `uvm_component_utils(mod_driver)
+
   mod_agent_cfg mod_cfg; //Referencia a la configuración del agente
   virtual mod_if mod_vif; //Referencia  a la interfaz del modem 
 
@@ -20,10 +36,10 @@ class mod_driver extends uvm_driver #(mod_seq_item);
     super.new(name, parent); 
   endfunction
 
-    //Build phase del driver
+  //Build phase del driver
   virtual function void build_phase(uvm_phase phase);
     super.build_phase(phase);
-    if (!uvm_config_db#(mod_agent_cfg)::get(this, "", "cfg", mod_cfg)) begin
+    if (!uvm_config_db#(mod_agent_cfg)::get(this, "", "mod_cfg", mod_cfg)) begin
       `uvm_fatal("NO CFG", "Driver sin mod_cfg")
     end
     mod_vif = mod_cfg.vif; //Se obtiene la referencia a la interfaz del modem
@@ -31,14 +47,13 @@ class mod_driver extends uvm_driver #(mod_seq_item);
 
   task reposo();
     mod_vif.dsr_pad_i <= 1'b0;
-    mod_vif.ri_pad_i <= 1'b0;
+    mod_vif.ri_pad_i  <= 1'b0;
     mod_vif.cts_pad_i <= 1'b0;
     mod_vif.dcd_pad_i <= 1'b0; 
   endtask  
 
-//Run phase del driver
+  //Run phase del driver
   task run_phase(uvm_phase phase);
-
     reposo(); //Se inicializan las señales de entrada del modem
     @(negedge mod_vif.rst); //Se espera a que termine el reset
 
@@ -75,13 +90,13 @@ class mod_driver extends uvm_driver #(mod_seq_item);
 
       seq_item_port.item_done();
     end 
-
   endtask 
-// 
-endclass: mod_driver 
+endclass : mod_driver 
 
 
-//Monitor del modem 
+// =======================================================
+// Monitor Módem (mod_monitor)
+// =======================================================
 class mod_monitor extends uvm_monitor;
   `uvm_component_utils(mod_monitor)
 
@@ -98,7 +113,7 @@ class mod_monitor extends uvm_monitor;
     virtual function void build_phase(uvm_phase phase);
     super.build_phase(phase);
      mod_mon_ap = new("mod_mon_ap", this);
-    if (!uvm_config_db#(mod_agent_cfg)::get(this, "", "cfg", mod_cfg)) begin
+    if (!uvm_config_db#(mod_agent_cfg)::get(this, "", "mod_cfg", mod_cfg)) begin
       `uvm_fatal("NO CFG", "Monitor sin mod_cfg")
     end
 
@@ -189,15 +204,14 @@ class mod_monitor extends uvm_monitor;
           cts_prev = cts_now;
         end
       end 
-
     endtask
+endclass : mod_monitor
 
-endclass: mod_monitor
 
-
-//Monitor de interrupciones modem
+// =======================================================
+// Monitor de interrupciones Módem (intr_monitor)
+// =======================================================
 class intr_monitor extends uvm_monitor; 
-
   `uvm_component_utils(intr_monitor)
 
   //Constructor
@@ -213,7 +227,7 @@ class intr_monitor extends uvm_monitor;
   virtual function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     mod_intr_mon_ap = new("mod_intr_mon_ap", this);
-    if (!uvm_config_db#(mod_agent_cfg)::get(this, "", "cfg", mod_cfg)) begin
+    if (!uvm_config_db#(mod_agent_cfg)::get(this, "", "mod_cfg", mod_cfg)) begin
       `uvm_fatal("NO CFG", "Monitor de interrupciones sin mod_cfg")
     end
     mod_vif = mod_cfg.vif; //Se obtiene la referencia a la interfaz del modem
@@ -247,10 +261,12 @@ class intr_monitor extends uvm_monitor;
       end 
     end 
   endtask
-endclass: intr_monitor
+endclass : intr_monitor
 
 
-//Agente del modem
+// =======================================================
+// Agente Módem (mod_agent)
+// =======================================================
 class mod_agent extends uvm_agent;
   `uvm_component_utils(mod_agent)
 
@@ -275,7 +291,7 @@ class mod_agent extends uvm_agent;
   //Build phase
   virtual function void build_phase(uvm_phase phase);
     super.build_phase(phase);
-    if (!uvm_config_db#(mod_agent_cfg)::get(this, "", "cfg", mod_cfg)) begin
+    if (!uvm_config_db#(mod_agent_cfg)::get(this, "", "mod_cfg", mod_cfg)) begin
       `uvm_fatal("NO CFG", "Agente sin mod_cfg")
     end
 
@@ -308,7 +324,6 @@ class mod_agent extends uvm_agent;
         mod_mon.mod_mon_ap.connect(this.mod_agent_ap);
         intr_mon.mod_intr_mon_ap.connect(this.mod_agent_intr_ap);
     endfunction
-
-endclass: mod_agent
+endclass : mod_agent
 
 `endif //MOD_AGENT_SV

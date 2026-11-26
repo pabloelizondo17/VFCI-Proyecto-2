@@ -1,25 +1,40 @@
+// =======================================================
+// Ítem Módem
+// -------------------------------------------------------
+// Item de secuencia: mod_seq_item
+// Item de intr: mod_intr_item
+// -------------------------------------------------------
+// Objetos de configuración: 
+//  - mod_agent_cfg 
+//  - uart_stim_cfg
+// =======================================================
+
+
 `ifndef MOD_SEQ_ITEM_SV
 `define MOD_SEQ_ITEM_SV
 
 typedef enum {RI_NONE, RI_RISE, RI_FALL} ri_edge_e; //Activo en alto *Verificar
 
+// =======================================================
+// Ítem Módem (mod_seq_item)
+// =======================================================
 class mod_seq_item extends uvm_sequence_item;
 
-  //Señales de estímulo  
-  rand bit  dsr_pad_i; 
-  rand bit  ri_pad_i;
-  rand bit  cts_pad_i; 
-  rand bit  dcd_pad_i; 
-  rand int unsigned delay; //Ciclos antes de aplicar cambios de señales
+  // ===== Señales de estímulo   ===== 
+  rand bit          dsr_pad_i; 
+  rand bit          ri_pad_i;
+  rand bit          cts_pad_i; 
+  rand bit          dcd_pad_i; 
+  rand int unsigned delay;    //Ciclos antes de aplicar cambios de señales
   
-  //Señales que reporta el monitor 
-  bit  rts_pad_o;
-  bit  dtr_pad_o; 
-  ri_edge_e ri_edge; //Indica si hubo flanco de RI
+  // ===== Señales que reporta el monitor  ===== 
+  bit       rts_pad_o;
+  bit       dtr_pad_o; 
+  ri_edge_e ri_edge;  //Indica si hubo flanco de RI
 
   longint unsigned cycle; //Ciclo (clk_counter) en el que el monitor vio el cambio
 
-  //Registro en la fábrica
+  // ===== Registro en la fábrica ===== 
   `uvm_object_utils_begin(mod_seq_item)
     `uvm_field_int(dsr_pad_i, UVM_ALL_ON)
     `uvm_field_int(ri_pad_i, UVM_ALL_ON)
@@ -32,31 +47,34 @@ class mod_seq_item extends uvm_sequence_item;
     `uvm_field_enum(ri_edge_e, ri_edge, UVM_ALL_ON)
   `uvm_object_utils_end
 
-  //Constraints
+  //  ===== Restricciones ===== 
+  constraint c_delay {
+    soft delay inside {[0:1000]};
+  } //Retardo máximo de 1000 ciclos
 
-  constraint c_delay {soft delay inside {[0:1000]};} //Retardo máximo de 1000 ciclos
-
-  // Constructor
+  //  ===== Constructor con la fábrica ===== 
     function new(string name = "mod_seq_item"); 
         super.new(name); 
     endfunction
+endclass : mod_seq_item
 
 
-endclass: mod_seq_item
-
+// =======================================================
+// Ítem de intr (mod_intr_item)
+// =======================================================
 class mod_intr_item extends uvm_sequence_item;
 
-  //Señal que lee del DUT
-  bit  int_o; 
+  // ===== Señal que lee del DUT ===== 
+  bit              int_o; 
   longint unsigned cycle; //Ciclo de reloj en el que se detectó la interrupción
 
-  //Registro en la fábrica
+  // ===== Registro en la fábrica ===== 
   `uvm_object_utils_begin(mod_intr_item)
     `uvm_field_int(int_o, UVM_ALL_ON)
     `uvm_field_int(cycle, UVM_ALL_ON | UVM_NOCOMPARE)
   `uvm_object_utils_end
 
-  // Constructor
+  // ===== Constructor con la fábrica ===== 
     function new(string name = "mod_intr_item"); 
         super.new(name); 
     endfunction
