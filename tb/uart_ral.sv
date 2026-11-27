@@ -587,4 +587,50 @@ class uart_reg_adapter extends uvm_reg_adapter;
     endfunction
 endclass : uart_reg_adapter
 
+// =======================================================
+// Puente RAL (wb_ral_bridge)
+//  - Envía cada transacción al predictor del mapa correcto
+// =======================================================
+class wb_ral_bridge extends uvm_subscriber #(wb_item);
+    `uvm_component_utils(wb_ral_bridge)
+
+    uart_reg_block               ral;
+    uvm_analysis_port #(wb_item) ap_dlab0, ap_dlab1;
+    bit                          dlab;   // refleja LCR[7] del DUT (0 tras reset)
+
+    // ===== Constructor con la fábrica =====
+    function new(string name = "wb_ral_bridge", uvm_component parent = null);
+        super.new(name, parent);
+    endfunction
+
+    // ===== Fase "build" de UVM =====
+    function void build_phase(uvm_phase phase);
+        super.build_phase(phase);
+
+        ap_dlab0 = new("ap_dlab0", this);
+        ap_dlab1 = new("ap_dlab1", this);
+    endfunction
+
+    // ===== Transacción del monitor Wishbone =====
+    function void write(wb_item t);
+        case (t.kind)
+            // ----- Reset (activo en alto): espejo y DLAB a su valor de reset -----
+            WB_RESET: if (t.data[0]) begin
+                ral.reset();
+                dlab = 1'b0;
+            end
+
+            WB_BUS: begin
+                // ----- Se enruta con el DLAB vigente ANTES de este acceso -----
+                if (dlab) ap_dlab1.write(t);
+                else      ap_dlab0.write(t);
+
+                // ----- Escritura al carril 3 de la dirección 3: LCR[7:0] = data[31:24] -----
+                if (t.we && t.addr == 'h3 && t.sel == 4'b1000)
+                    dlab = t.data[31];
+            end
+        endcase
+    endfunction
+endclass : wb_ral_bridge
+
 `endif //UART_RAL_SV
