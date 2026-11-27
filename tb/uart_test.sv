@@ -53,20 +53,35 @@ class uart_base_test extends uvm_test;
         super.end_of_elaboration_phase(phase);
 
         uvm_top.print_topology();
-        cfg.print_knobs();
     endfunction
 
 
     // ===== Fase "run" de UVM =====
     task run_phase(uvm_phase phase);
+        uart_main_vseq vseq;
 
-
+        phase.raise_objection(this);
+        vseq = uart_main_vseq::type_id::create("vseq");
+        vseq.start(env.v_sqr);
+        phase.drop_objection(this);
     endtask
 
     // ===== Fase "report" de UVM =====
     function void report_phase(uvm_phase phase);
+        uvm_report_server svr;
+        int               n_errors;
+
         super.report_phase(phase);
 
+        svr      = uvm_report_server::get_server();
+        n_errors = svr.get_severity_count(UVM_ERROR) 
+                 + svr.get_severity_count(UVM_FATAL);
+
+        if (n_errors == 0) begin
+            `uvm_info("RESULT", "*** PRUEBA APROBADA ***", UVM_NONE)
+        end else begin
+            `uvm_info("RESULT", $sformatf("*** PRUEBA FALLIDA con %0d errores. ***", n_errors), UVM_NONE)
+        end     
     endfunction
 endclass : uart_base_test
 

@@ -1,0 +1,11 @@
++incdir+../src
+../src/raminfr.v
+../src/uart_rfifo.v
+../src/uart_tfifo.v
+../src/uart_sync_flops.v
+../src/uart_transmitter.v
+../src/uart_receiver.v
+../src/uart_regs.v
+../src/uart_wb.v
+../src/uart_debug_if.v
+../src/uart_top.v
