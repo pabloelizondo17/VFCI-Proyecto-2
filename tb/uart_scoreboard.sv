@@ -73,8 +73,8 @@ class uart_scoreboard extends uvm_scoreboard;
   //Build phase
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
-    if (!uvm_config_db#(uart_scoreboard_cfg)::get(this, "", "env_cfg", env_cfg))
-      `uvm_fatal("NOCFG", "Scoreboard no encontró su cfg")
+    if (!uvm_config_db#(uart_env_cfg)::get(this, "", "env_cfg", env_cfg))
+      `uvm_fatal("NOCFG", "Scoreboard no encontró el objeto de configuracion del ambiente")
     vif = env_cfg.wb_cfg.wb_vif;
     if (vif == null)
       `uvm_fatal("NOVIF", "la cfg del scoreboard no tiene vif")
@@ -150,11 +150,16 @@ class uart_scoreboard extends uvm_scoreboard;
     end
 
     case (dir)
-      3'd0: if (!lcr[7]) check_rbr(dato); // DLL
+      3'd0: if (!lcr[7]) check_rbr(dato);
+            else         check_reg("DLL", dato, dl[7:0]);
+      3'd1: if (!lcr[7]) check_reg("IER", dato, ier);
+            else         check_reg("DLM", dato, dl[15:8]);
       3'd2: check_iir(dato);
+      3'd3: check_reg("LCR", dato, lcr);
+      3'd4: check_reg("MCR", dato, 8'h00); 
       3'd5: check_lsr(dato);
       3'd6: check_msr(dato);
-      default: ; // IER o DLM, LCR, MCR, scratch
+      3'd7: check_reg("SR", dato, scratch);
     endcase
   endfunction
 
@@ -407,6 +412,13 @@ class uart_scoreboard extends uvm_scoreboard;
     //Error si el dato es diferente al esperado
     if (dato != esperado.data)
       `uvm_error("CHECK_RBR", $sformatf("RBR: DUT 0x%02h, se esperaba 0x%02h", dato, esperado.data))
+  endfunction
+
+    //Registros que solo cambian por el bus: valor exacto
+  function void check_reg(string nombre, bit [7:0] dato, bit [7:0] esperado);
+    n_comparaciones++;
+    if (dato != esperado)
+      `uvm_error("CHECK_REG", $sformatf("%s: DUT 0x%02h, se esperaba 0x%02h", nombre, dato, esperado))
   endfunction
 
   //Cada vez que se lee LSR, determina cuales son los fields seguros de leer
