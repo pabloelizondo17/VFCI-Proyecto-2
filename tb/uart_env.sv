@@ -109,10 +109,10 @@ class uart_env extends uvm_env;
       reg_model.map_dlab1.set_auto_predict(0);
 
       reg_predictor_0.map = reg_model.map_dlab0; 
-      reg_predictor_0.reg_adapter = reg_adapter;
+      reg_predictor_0.adapter = reg_adapter;
 
       reg_predictor_1.map = reg_model.map_dlab1;  
-      reg_predictor_1.reg_adapter = reg_adapter;
+      reg_predictor_1.adapter = reg_adapter;
 
       bridge.ral     = reg_model;
 
