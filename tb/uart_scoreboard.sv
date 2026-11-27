@@ -13,7 +13,7 @@ class uart_scoreboard extends uvm_scoreboard;
   `uvm_component_utils(uart_scoreboard)
 
   //Puertos
-  uvm_analysis_imp_wb #(wb_item_t, uart_scoreboard) wb_imp; 
+  uvm_analysis_imp_wb #(wb_item, uart_scoreboard) wb_imp; 
   uvm_analysis_imp_ser_drv #(serial_seq_item, uart_scoreboard) serial_drv_imp; 
   uvm_analysis_imp_ser_tx #(serial_seq_item, uart_scoreboard) serial_tx_imp; 
   uvm_analysis_imp_mod #(mod_seq_item, uart_scoreboard) mod_imp; 
@@ -89,7 +89,7 @@ class uart_scoreboard extends uvm_scoreboard;
   //Entradas de los monitores
 
   // Escritura: actualiza el modelo. Lectura: llama al chequeo según la dirección
-  function void write_wb(wb_item_t item);
+  function void write_wb(wb_item item);
     bit [2:0] dir; //registro del UART
     bit [7:0] dato; //byte que se escribió o leyó
     bit debug; //lectura de Debug 1 0 2
@@ -593,7 +593,7 @@ class uart_scoreboard extends uvm_scoreboard;
   endfunction
 
   //Verificacion de debug 1 y 2 coinciden con el modelo
-  function void check_dbg(wb_item_t item);
+  function void check_dbg(wb_item item);
     bit [31:0] d;
     int unsigned k_min, n_min, rf, tf;
 
