@@ -104,39 +104,33 @@ class uart_scoreboard extends uvm_scoreboard;
     //Ubicar el registro y byte
     debug = 0;
     sel_invalido = 0;
-    if (`WB_DATA_W == 8) begin
-      dir = item.addr[2:0];
-      dato = item.data[7:0];
-    end
-    else begin
-      // bus de 32 bits: addr[4:2] elige la palabra y sel elige el byte
-      case (item.sel)
+    // bus de 32 bits: addr[4:2] elige la palabra y sel elige el byte
+    case (item.sel)
 
-        4'b0001: begin 
-          dir = {item.addr[2], 2'd0}; dato = item.data[7:0]; 
-        end
+      4'b0001: begin 
+        dir = {item.addr[2], 2'd0}; dato = item.data[7:0]; 
+      end
 
-        4'b0010: begin 
-          dir = {item.addr[2], 2'd1}; dato = item.data[15:8]; 
-        end
+      4'b0010: begin 
+        dir = {item.addr[2], 2'd1}; dato = item.data[15:8]; 
+      end
 
-        4'b0100: begin 
-          dir = {item.addr[2], 2'd2}; dato = item.data[23:16]; 
-        end
+      4'b0100: begin 
+        dir = {item.addr[2], 2'd2}; dato = item.data[23:16]; 
+      end
 
-        4'b1000: begin 
-          dir = {item.addr[2], 2'd3}; dato = item.data[31:24]; 
-        end
+      4'b1000: begin 
+        dir = {item.addr[2], 2'd3}; dato = item.data[31:24]; 
+      end
 
-        4'b1111: debug = 1;
+      4'b1111: debug = 1;
 
-        default: begin 
-          sel_invalido = 1;
-          dir = {item.addr[2], 2'd0};
-          dato = item.data[7:0];
-        end
-      endcase
-    end
+      default: begin 
+        sel_invalido = 1;
+        dir = {item.addr[2], 2'd0};
+        dato = item.data[7:0];
+      end
+    endcase
 
     //Escritura
     if (item.we) begin
