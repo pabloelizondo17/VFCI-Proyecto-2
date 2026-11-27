@@ -24,7 +24,7 @@ class uart_env extends uvm_env;
     uart_coverage                cov;
     uvm_reg_predictor #(wb_item) reg_predictor_0;
     uvm_reg_predictor #(wb_item) reg_predictor_1;
-    uart_ral_bridge                bridge;
+    wb_ral_bridge                bridge;
 
     // ----- Punteros de los objetos -----
     uart_env_cfg                 env_cfg;
@@ -114,7 +114,7 @@ class uart_env extends uvm_env;
       reg_predictor_1.map = reg_model.map_dlab1;  
       reg_predictor_1.reg_adapter = reg_adapter;
 
-      bridge.ral = reg_model;
+      bridge.ral     = reg_model;
 
       wb_agt.wb_agent_ap.connect(bridge.analysis_export);
       bridge.ap_dlab0.connect(reg_predictor_0.bus_in);
